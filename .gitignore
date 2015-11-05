@@ -1,0 +1,6 @@
+obj/
+winobj/
+fastzip
+fastzip.exe
+*.zip
+
