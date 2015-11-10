@@ -55,7 +55,6 @@ static int store_compressed(FILE *fp, int inSize, uint8_t *target, uint8_t *sha)
     uint8_t *fileData = target;
     fread(fileData, 1, inSize, fp);
 
-    // printf("%02x %02x\n", fileData[0], fileData[1]);
     int total = 0;
     if (sha)
     {
@@ -65,8 +64,8 @@ static int store_compressed(FILE *fp, int inSize, uint8_t *target, uint8_t *sha)
         mz_stream stream;
         memset(&stream, 0, sizeof(stream));
         int rc = mz_inflateInit2(&stream, -MZ_DEFAULT_WINDOW_BITS);
-        // printf("RC %d\n", rc);
-        stream.next_in = fileData;
+        
+		stream.next_in = fileData;
         stream.avail_in = inSize;
 
         stream.next_out = buf;
@@ -86,8 +85,8 @@ static int store_compressed(FILE *fp, int inSize, uint8_t *target, uint8_t *sha)
             }
             total += (bufSize - stream.avail_out);
         }
-        // printf("Total %d bytes unpacked\n", total);
-        mz_inflate(&stream, MZ_FINISH);
+        
+		mz_inflate(&stream, MZ_FINISH);
 
         SHA1_Final(sha, &context);
     }
@@ -125,7 +124,7 @@ static PackResult store_uncompressed(FILE *fp, int inSize, uint8_t *out, size_t 
 
 #ifdef WITH_INTEL
 
-static PackResult intel_deflate(FILE *fp, int inSize, uint8_t *buffer, size_t *outSize,
+static PackResult intel_deflate(FILE *fp, size_t inSize, uint8_t *buffer, size_t *outSize,
     uint32_t *checksum, uint8_t *sha, int earlyOut)
 {
     LZ_Stream2 stream __attribute__((aligned(16)));
@@ -135,10 +134,7 @@ static PackResult intel_deflate(FILE *fp, int inSize, uint8_t *buffer, size_t *o
     if (fread(fileData, 1, inSize, fp) != inSize)
         return RC_FAILED;
 
-    // uint8_t *fileData = new uint8_t [inSize];
     uint8_t *inBuf = fileData;
-
-    // fread(fileData, 1, inSize, fp);
 
     if (sha)
     {
@@ -212,7 +208,6 @@ static PackResult intel_deflate(FILE *fp, int inSize, uint8_t *buffer, size_t *o
     int percent = (int)(*outSize * 100 / inSize);
     if (earlyOut && (buffer + *outSize < fileData))
     {
-        // printf("Ratio at end: %d%%\n", percent);
         if (percent >= earlyOut)
         {
             *outSize = inSize;
@@ -225,7 +220,6 @@ static PackResult intel_deflate(FILE *fp, int inSize, uint8_t *buffer, size_t *o
         }
     }
 
-    // delete [] fileData;
     return RC_COMPRESSED;
 }
 
@@ -324,8 +318,6 @@ void Fastzip::packZipData(FILE *fp, int size, PackFormat inFormat, PackFormat ou
         target.originalSize = store_compressed(fp, size, outBuf, sha);
         outSize = size;
     }
-
-    // printf("%s %s", target.name.c_str(), base64_encode(target.sha, SHA_LEN).c_str());
 
     target.data = outBuf;
     target.dataSize = outSize;
@@ -432,7 +424,6 @@ void Fastzip::exec()
         throw fastzip_exception("No paths specified");
     if (fileNames.size() >= 65535)
     {
-        // throw fastzip_exception("Can not put more than 64K files in one archive");
         warning("More than 64K files, adding 64bit features.");
     }
     if (zipfile == "")
@@ -582,12 +573,7 @@ void Fastzip::exec()
                         if (doSeq)
                         {
                             while (fileName.index != currentIndex)
-                            {
-                                // printf("%s:%d != %d\n", fileName.target.c_str(),
-                                // fileName.index,
-                                // currentIndex);
                                 seq_cv.wait(lock);
-                            }
                         }
                         if (doSign)
                         {
@@ -603,7 +589,7 @@ void Fastzip::exec()
                     }
                     if (doSeq)
                         seq_cv.notify_all();
-                    delete entry.data;
+                    delete [] entry.data;
                 }
                 else
                 {
@@ -626,8 +612,6 @@ void Fastzip::exec()
 
     for (int i = 0; i < threadCount; i++)
         workerThreads[i].join();
-
-    // intf("%ld %ld\n", (long)0xff000000, sizeof(long));
 
     if (ftell_x(zipArchive.getFile()) > (int64_t)0xff000000)
         throw fastzip_exception("Resulting file too large");
@@ -753,7 +737,6 @@ void Fastzip::sign(ZipArchive &zipArchive, const string &digestFile)
 
     RSA_sign(NID_sha1, digest, SHA_LEN, &sign[0], &signLen, rsa);
 
-    // printf("signLen %d\n", signLen);
     sign.resize(signLen);
 
     auto data =

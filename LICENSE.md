@@ -34,4 +34,8 @@ Copyright (c) 1998-2011 The OpenSSL Project.  All rights reserved.<br/>
 Copyright (C) 1995-1998 Eric Young (eay@cryptsoft.com)<br/>
 See src/openssl/LICENCE<br/>
 
+### miniz (deflate.cpp)
+
+Public domain<br/>
+Rich Geldreich (richgel99@gmail.com)</br>
 

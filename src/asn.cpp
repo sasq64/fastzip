@@ -69,7 +69,7 @@ namespace asn1
             }
             else if (der.tag == 0x02)
             {
-                printf("%llx\n", der.value);
+                printf("%llx\n", (unsigned long long)der.value);
             }
             else if (der.tag == 03 || der.tag == 4 || der.tag == 6)
             {

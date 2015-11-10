@@ -138,16 +138,13 @@ vector<uint8_t> recoverKey(const string &password, const vector<uint8_t> &protec
         plainKey[i] = (uint8_t)(encrKey[i] ^ xorKey[i]);
     }
 
-    /*
-     * Check the integrity of the recovered key by concatenating it with
-     * the password, digesting the concatenation, and comparing the
-     * result of the digest operation with the digest provided at the end
-     * of <code>protectedKey</code>. If the two digest values are
-     * different, throw an exception.
-     */
+   
+    // Check the integrity of the recovered key by concatenating it with
+    // the password, digesting the concatenation, and comparing the
+    // result of the digest operation with the digest provided at the end
+    // of 'protectedKey'. If the two digest values are
+    // different, throw an exception.
     SHA1_Update(&context, &passwdBytes[0], passwdBytes.size());
-    // Arrays.fill(passwdBytes, (uint8_t)0x00);
-    // passwdBytes = null;
     SHA1_Update(&context, &plainKey[0], plainKey.size());
     SHA1_Final(&digest[0], &context);
 
@@ -216,21 +213,17 @@ vector<uint8_t> KeyStore::getKey(const string &pass, const string &name)
         auto alias = membuf.readString();
         auto timestamp = membuf.read<uint64_t>();
 
-        // printf("%d Alias %s\n", i, alias.c_str());
-
         assert(tag == 1);
 
         auto length = membuf.read<uint32_t>();
         DER keyData = readDER(membuf.readBuffer(length).buffer());
         if (!foundKey && (name == "" || alias == name))
         {
-            // printf("%02x\n", keyData.tag);
             for (int i = 0; i < keyData.size(); i++)
             {
                 if (keyData[i].tag == 0x04)
                 {
                     privateKey = keyData[i].data;
-                    // printf("Found private key %lx bytes\n", privateKey.size());
                     foundKey = true;
                     break;
                 }
@@ -239,8 +232,8 @@ vector<uint8_t> KeyStore::getKey(const string &pass, const string &name)
 
         auto ccount = membuf.read<uint32_t>();
         auto certName = membuf.readString();
-        // printf("%d %s\n", ccount, certName.c_str());
-        for (unsigned j = 0; j < ccount; j++)
+
+		for (unsigned j = 0; j < ccount; j++)
         {
             auto clen = membuf.read<uint32_t>();
             auto certBuf = membuf.readBuffer(clen);
@@ -248,18 +241,11 @@ vector<uint8_t> KeyStore::getKey(const string &pass, const string &name)
             {
                 certificate = certBuf.buffer();
                 DER certData = readDER(certificate);
-                // dumpDER(certificate);
 
                 for (int i = 0; i < certData[0].size(); i++)
                 {
-                    // printf("%02x\n", certDatag173.tag);
                     if (certData[0][i].tag == 0x30 && certData[0][i][0].tag == 0x31)
-                    {
-                        // printf("FOUND\n");
-                        // certMetaData = MemBuffer(certData[0][i].data);
-                        // dumpDER(certMetaData);
                         break;
-                    }
                 }
             }
         }
@@ -273,8 +259,8 @@ vector<uint8_t> KeyStore::getKey(const string &pass, const string &name)
     auto plainKey = recoverKey(pass, privateKey);
 
     DER keyData = readDER(plainKey);
-    // dumpDER(MemBuffer(plainKey));
-    for (int j = 0; j < keyData.size(); j++)
+    
+	for (int j = 0; j < keyData.size(); j++)
     {
         if (keyData[j].tag == 0x04)
         {

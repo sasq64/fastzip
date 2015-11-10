@@ -42,9 +42,6 @@ private:
     asn1::MemBuffer membuf;
 
     std::vector<uint8_t> certificate;
-    // std::vector<uint8_t> privateKey;
-    // std::unordered_map<std::string, std::vector<uint8_t>> keys;
-    // MemBuffer certMetaData;
 };
 
 #endif // CRYPTO_H

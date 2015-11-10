@@ -11,7 +11,7 @@
 
 namespace asn1
 {
-// Routines for ASN.1 reading and creation
+	// Routines for ASN.1 reading and creation
 
     class MemBuffer
     {

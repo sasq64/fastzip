@@ -6,7 +6,6 @@
 #include <functional>
 #include <sys/stat.h>
 #include <unistd.h>
-//#include <fcntl.h>
 #include <dirent.h>
 #include <cstring>
 #include <deque>
@@ -27,9 +26,6 @@
 #define ftell_x ftell
 #define fseek_x fseek
 #endif
-
-// template <class C, template <typename> class CONTAINER>
-// std::vector<CONTAINER<C>> split(const CONTAINER<C> &s, const std::string &delim, unsigned limit);
 
 template<class C>
 std::vector<std::basic_string<C> > split(const std::basic_string<C> &s,
@@ -175,9 +171,6 @@ public:
         dirty = true;
         PARENT::pop_front();
     }
-
-    // void push_front(const T& value) {}
-    // template <class ... S> void emplace_front(S&&... s) {}
 
 private:
     void cleanup()

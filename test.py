@@ -4,9 +4,9 @@ import subprocess;
 import os;
 
 try :
-	print subprocess.check_output('./fastzip -8 infozip.zip infozip'.split())
+	print subprocess.check_output('./fastzip -8 infozip.zip src/infozip'.split())
 	print subprocess.check_output('./fastzip -0 obj.zip obj'.split())
-	print subprocess.check_output('./fastzip -v --sign -Z infozip.zip igzip.zip igzip -0 -Z obj.zip fastzip=fs.stored -9 fastzip=packed/fastzip'.split())
+	print subprocess.check_output('./fastzip -j -v --sign -Z infozip.zip igzip.zip src/igzip -0 -Z obj.zip fastzip=fs.stored -9 fastzip=packed/fastzip'.split())
 	print subprocess.check_output('unzip -lv igzip.zip'.split())
 	output = subprocess.check_output('unzip -t igzip.zip'.split())
 	if output.find('No errors detected') >= 0 :

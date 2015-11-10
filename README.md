@@ -3,15 +3,15 @@ by _Jonas Minnberg_ (jonasmi@unity3d.com)
 
 * Parallell zip compression using *Info-ZIP* deflate or *Intel* fast deflate
 * On-the-fly Jar signing
-* Created with the goal of fast APK creation.
+* Created with the goal of fast APK creation
 
-* Check LICENCE.md for license
+* Check _LICENCE.md_ for license information
 
 ## Build (Unix/OSX)
 
 * Make sure you have *yasm* and *openssl* installed.
 * `make`
-* `WITH_INTEL=0 make` - Build without Intel code
+* `WITH_INTEL=0 make` - Build without Intel code.
 * `./test.py` - Simple functional test
 
 ## Build (Windows)
@@ -25,6 +25,7 @@ by _Jonas Minnberg_ (jonasmi@unity3d.com)
 
     fastzip <directory>
     fastzip <file.zip> <paths>...
+	fastzip --help
 
 ## Speed Tests
 
