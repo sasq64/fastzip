@@ -8,7 +8,7 @@
 #include <cstdio>
 #include <cstdlib>
 #include <unistd.h>
-
+#include <vector>
 using namespace std;
 
 #ifdef DO_BENCHMARK
@@ -21,6 +21,7 @@ static void BM_Inflate(benchmark::State &state)
 {
     vector<uint8_t> testdata(256 * 1024, 0);
     vector<uint8_t> output(512 * 1024);
+
     if (fileExists(".benchdata"))
     {
         printf("Reading\n");
@@ -261,6 +262,25 @@ int main(int argc, char **argv)
             }
         }
     }
+
+	if (!isatty(fileno(stdin)))
+	{
+		char line[1024];
+		while (true)
+		{
+			if (!fgets(line, sizeof(line), stdin))
+				break;
+			auto e = strlen(line) - 1;
+			while (line[e] == 10 || line[e] == 13)
+				line[e--] = 0;
+			PackFormat packFormat =
+				(packLevel == 0 || packMode == INFOZIP ? (PackFormat)packLevel
+				 : INTEL_COMPRESSED);
+			fs.addDir(line, packFormat);
+			noFiles = false;
+
+		}
+	}
 
     // If only a directory is given, pack that to a zip
     struct stat ss;
