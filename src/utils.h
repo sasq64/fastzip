@@ -172,6 +172,8 @@ public:
         PARENT::pop_front();
     }
 
+	std::set<T>& data() { return unique; }
+
 private:
     void cleanup()
     {

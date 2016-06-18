@@ -43,16 +43,15 @@ enum PackFormat
 
 struct FileTarget
 {
-    FileTarget(const std::string &source = "", const std::string &target = "", int index = -1,
+    FileTarget(const std::string &source = "", const std::string &target = "",
                PackFormat pf = INTEL_COMPRESSED)
-        : source(source), target(target), index(index), packFormat(pf)
+        : source(source), target(target), packFormat(pf)
     {
     }
 
     std::string source;
     std::string target;
     uint32_t offset = 0xffffffff;
-    uint16_t index;
     PackFormat packFormat;
 
     bool operator==(const FileTarget &other) const { return other.target == target; }
@@ -102,7 +101,6 @@ private:
 
     UniQueue<FileTarget> fileNames;
     int strLen = 0;
-    int indexCount = 0;
 
     KeyStore keyStore;
 };

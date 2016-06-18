@@ -44,6 +44,7 @@
 using namespace std;
 using namespace asn1;
 
+
 const static int SHA_LEN = 20;
 
 int64_t iz_deflate(int level, char *tgt, char *src, unsigned long tgtsize, unsigned long srcsize,
@@ -333,7 +334,6 @@ void Fastzip::addZip(string zipName, PackFormat packFormat)
         ft.source = zipName;
         ft.offset = e.offset;
         ft.target = e.name;
-        ft.index = indexCount++;
         ft.packFormat = packFormat;
         fileNames.push_back(ft);
 
@@ -414,7 +414,7 @@ void Fastzip::addDir(string d, PackFormat packFormat)
         }
         strLen += target.length();
 
-        fileNames.emplace_back(path, target, indexCount++, pf);
+        fileNames.emplace_back(path, target, pf);
     });
 }
 
@@ -448,17 +448,18 @@ void Fastzip::exec()
     mutex m;
     condition_variable seq_cv;
     int currentIndex = 0;
+	int totalCount = fileNames.size();
 
     vector<thread> workerThreads(threadCount);
 
     for (int i = 0; i < threadCount; i++)
     {
-        workerThreads[i] = thread(
-                [&]()
+        workerThreads[i] = thread( [&]()
         {
             while (true)
             {
                 FileTarget fileName;
+				int index;
                 {
                     lock_guard<mutex> lock {m};
                     if (ftell_x(zipArchive.getFile()) > (int64_t)0xff000000)
@@ -466,6 +467,7 @@ void Fastzip::exec()
                     if (fileNames.size() == 0)
                         return;
                     fileName = fileNames.front();
+					index = totalCount - fileNames.size();
                     fileNames.pop_front();
                 }
 
@@ -572,7 +574,7 @@ void Fastzip::exec()
                         unique_lock<mutex> lock {m};
                         if (doSeq)
                         {
-                            while (fileName.index != currentIndex)
+                            while (index != currentIndex)
                                 seq_cv.wait(lock);
                         }
                         if (doSign)
@@ -583,7 +585,6 @@ void Fastzip::exec()
                             while (*digestPtr)
                                 digestPtr++;
                         }
-
                         zipArchive.add(entry);
                         currentIndex++;
                     }
@@ -597,7 +598,7 @@ void Fastzip::exec()
                     {
                         {
                             unique_lock<mutex> lock {m};
-                            while (fileName.index != currentIndex)
+                            while (index != currentIndex)
                             {
                                 seq_cv.wait(lock);
                             }
