@@ -186,5 +186,9 @@ private:
 };
 
 uint32_t msdosToUnixTime(uint32_t m);
+void makedir(const std::string &name);
+void makedirs(const std::string &path);
+std::string path_directory(const std::string &name);
+std::string path_filename(const std::string &name);
 
 #endif // UTILS_H

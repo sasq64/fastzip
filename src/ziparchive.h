@@ -113,7 +113,7 @@ public:
 
     std::vector<Entry> entries;
 
-    ZipStream(const std::string &zipName)
+    ZipStream(const std::string &zipName) : zipName(zipName)
     {
         fp = fopen(zipName.c_str(), "rb");
         uint32_t id = 0;
@@ -149,6 +149,7 @@ public:
 
     int size() const { return entries.size(); }
     Entry getEntry(int i) { return entries[i]; }
+    const Entry& getEntry(int i) const { return entries[i]; }
 
     template<typename T> T read()
     {
@@ -157,7 +158,13 @@ public:
         return t;
     }
 
+	FILE *copyFP() const {
+		return fopen(zipName.c_str(), "rb");
+		//return fdopen(dup(fileno(fp)), "r");
+	}
+
 private:
+	std::string zipName;
     FILE *fp;
 };
 

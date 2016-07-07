@@ -26,7 +26,7 @@ LD = $(CXX)
 YASM = yasm
 OBJDIR = obj
 SRCDIR = src
-CFLAGS = -g -O2 -I$(SRCDIR)/igzip -I$(SRCDIR)/infozip -I$(SRCDIR)/openssl/include -Wno-deprecated-declarations -Wno-unused-result
+CFLAGS = -g -O0 -I$(SRCDIR)/igzip -I$(SRCDIR)/infozip -I$(SRCDIR)/openssl/include -Wno-deprecated-declarations -Wno-unused-result
 CFLAGS += -Wall -Wno-unused-variable -Wno-unused-function
 ASMFLAGS=-I $(SRCDIR)/igzip
 LIBS = -lcrypto
@@ -76,6 +76,7 @@ OBJFILES= \
   $(OBJDIR)/main.o \
   $(OBJDIR)/utils.o \
   $(OBJDIR)/fastzip.o \
+  $(OBJDIR)/funzip.o \
   $(OBJDIR)/asn.o \
   $(OBJDIR)/crypto.o \
   $(OBJDIR)/crc32/Crc32.o \

@@ -1,5 +1,45 @@
 #include "utils.h"
 
+void makedir(const std::string &name) {
+
+#ifdef _WIN32
+	mkdir(name.c_str());
+#else
+	mkdir(name.c_str(), 07777);
+#endif
+}
+
+void makedirs(const std::string &path) {
+	int start = 0;
+	while(true) {
+		auto pos = path.find_first_of("/\\", start);
+		if(pos != std::string::npos) {
+			makedir(path.substr(0, pos));
+			start = pos+1;
+        } else {
+            makedir(path);
+			break;
+        }
+	}
+}
+
+std::string path_directory(const std::string &name) {
+	auto slashPos = name.rfind('/');
+	if(slashPos == std::string::npos)
+		slashPos = 0;
+	return name.substr(0, slashPos);
+}
+
+std::string path_filename(const std::string &name) {
+	auto slashPos = name.rfind('/');
+	if(slashPos == std::string::npos)
+		slashPos = 0;
+	else
+		slashPos++;
+	return name.substr(slashPos);
+}
+
+
 bool fileExists(const std::string &name)
 {
     struct stat ss;

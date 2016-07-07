@@ -72,5 +72,20 @@ enum
     MZ_FINISH = 4,
     MZ_BLOCK = 5
 };
+// Return status codes. MZ_PARAM_ERROR is non-standard.
+enum
+{
+    MZ_OK = 0,
+    MZ_STREAM_END = 1,
+    MZ_NEED_DICT = 2,
+    MZ_ERRNO = -1,
+    MZ_STREAM_ERROR = -2,
+    MZ_DATA_ERROR = -3,
+    MZ_MEM_ERROR = -4,
+    MZ_BUF_ERROR = -5,
+    MZ_VERSION_ERROR = -6,
+    MZ_PARAM_ERROR = -10000
+};
+
 
 #endif // INFLATE_H

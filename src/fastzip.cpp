@@ -423,9 +423,7 @@ void Fastzip::exec()
     if (fileNames.size() == 0)
         throw fastzip_exception("No paths specified");
     if (fileNames.size() >= 65535)
-    {
         warning("More than 64K files, adding 64bit features.");
-    }
     if (zipfile == "")
         throw fastzip_exception("Zipfile must be specified");
 

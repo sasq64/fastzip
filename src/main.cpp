@@ -1,4 +1,5 @@
 #include "fastzip.h"
+#include "funzip.h"
 #include "utils.h"
 
 #ifdef _WIN32
@@ -60,19 +61,20 @@ Fastzip v1.0 by Jonas Minnberg
 
 Usage: fastzip [options] <zipfile> <paths...>
 
--z | --zip                             Zip-mode, better compression (default).
 -j | --junk-paths                      Strip initial part of path names.
--S | --sign[=<kstore>[,<pw>[,<name>]]] Jarsign the zip using the keystore file.
--e | --early-out=<percent>             Set worst detected compression for
-                                       switching to store. Default 98.
 -t | --threads=<n>                     Worker thread count. Defaults to number
                                        of CPU cores.
 -v | --verbose                         Print filenames.
+-X | x                                 Extract mode. Options below are ignored.      
+-S | --sign[=<kstore>[,<pw>[,<name>]]] Jarsign the zip using the keystore file.
+-e | --early-out=<percent>             Set worst detected compression for
+                                       switching to store. Default 98.
 )"
 #ifdef WITH_INTEL
-    "-I | --intel                           Intel-mode. Fast compression.\n"
+"-I | --intel                           Intel-mode. Fast compression.\n"
+"-z | --zip                             Zip-mode, better compression (default).\n"
 #endif
-    R"(-<digit>                               Pack level; 0 = Store only, 1-9 =
+R"(-<digit>                               Pack level; 0 = Store only, 1-9 =
                                        Zip-mode compression level.
 -s | --seq                             Store files in specified order. Impacts
                                        parallellism.
@@ -131,6 +133,7 @@ int main(int argc, char **argv)
     int packLevel = 5;
     int packMode = INFOZIP;
     bool noFiles = true;
+	bool extractMode = false;
 
 #ifdef _WIN32
     SYSTEM_INFO sysinfo;
@@ -141,6 +144,9 @@ int main(int argc, char **argv)
     fs.threadCount = sysconf(_SC_NPROCESSORS_ONLN);
     string HOME = getenv("HOME");
 #endif
+
+	if(strcmp(argv[1], "x") && !fileExists("x"))
+		extractMode = true;
 
     for (int i = 1; i < argc; i++)
     {
@@ -243,7 +249,12 @@ int main(int argc, char **argv)
                     error("'threads' needs exactly one argument");
                 fs.threadCount = atoi(args[0].c_str());
             }
-			else if(name == "help" || opt == 'h') {
+			else if (opt == 'x')
+			{
+				extractMode = true;
+			}
+			else if(name == "help" || opt == 'h')
+			{
 				// Do nothing here
 			} else
                 error("Unknown option");
@@ -305,6 +316,16 @@ int main(int argc, char **argv)
         puts(helpText.c_str());
         return 0;
     }
+
+	if(extractMode)
+	{
+		FUnzip fuz;
+		fuz.zipName = fs.zipfile;
+		fuz.threadCount = fs.threadCount;
+		fuz.verbose = fs.verbose;
+		fuz.exec();
+		return 0;
+	}
 
     try
     {
