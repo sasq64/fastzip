@@ -5,7 +5,7 @@
 
 #include <cassert>
 #include <time.h>
-
+#include <sys/stat.h>
 /*
     local file header signature     4 bytes  (0x04034b50)
       version needed to extract       2 bytes
@@ -83,72 +83,204 @@ struct __attribute__((packed)) Extra64
 {
     uint16_t id;
     uint16_t size;
-    uint64_t uncompSize;
-    uint64_t compSize;
-    uint64_t offset;
+    int64_t uncompSize;
+    int64_t compSize;
+    int64_t offset;
     uint32_t disk;
 };
+
+struct __attribute__((packed)) EndOfCentralDir
+{
+	uint32_t id;
+	uint16_t disk;
+	uint16_t cddisk;
+	uint16_t diskentries;
+	uint16_t entries;
+	uint32_t cdsize;
+	uint32_t cdoffset;
+	uint16_t commlen;
+};
+
+struct __attribute__((packed)) EndOfCentralDir64
+{
+	uint32_t id;
+	uint64_t size;
+	uint16_t v0;
+	uint16_t v1;
+	uint32_t disk;
+	uint32_t cddisk;
+	uint64_t diskentries;
+	uint64_t entries;
+	int64_t cdsize;
+	int64_t cdoffset;
+};
+
+struct __attribute__((packed)) UnixExtra
+{
+	uint32_t Atime;
+	uint32_t Mtime;
+	int16_t Uid;
+	int16_t Gid;
+	uint8_t var[0];
+};
+
+struct __attribute__((packed)) Unix2Extra
+{
+	uint8_t ver;
+	uint8_t ulen;
+	int32_t UID;
+	uint8_t glen;
+	int32_t GID;
+};
+
+struct __attribute__((packed)) Zip64Extra
+{
+    int64_t uncompSize;
+    int64_t compSize;
+    int64_t offset;
+    uint32_t disk;
+};
+
+struct __attribute__((packed)) Extra
+{
+	uint16_t id;
+	uint16_t size;
+	union __attribute__((packed)) {
+		UnixExtra unix;
+		Unix2Extra unix2;
+		Zip64Extra zip64;
+		uint8_t data[0xffff];
+	};
+};
+
 
 struct ZipEntry
 {
     std::string name;
     bool store;
     uint8_t *data;
-    int dataSize;
-    int originalSize;
+    uint64_t dataSize;
+    uint64_t originalSize;
     uint32_t crc;
-    uint32_t timeStamp;
+    time_t timeStamp;
+	uint16_t flags;
+	int uid;
+	int gid;
     // uint8_t sha[SHA_LEN];
 };
+
+struct zip_exception
+{
+	zip_exception(const std::string &msg) : msg(msg) {}
+	std::string msg;
+};
+
+inline void error(const std::string &msg)
+{
+	fprintf(stderr, "**Error: %s", (msg + "\n").c_str());
+	exit(1);
+}
 
 class ZipStream
 {
 public:
     struct Entry
     {
-        Entry(const std::string &name, uint32_t offset) : name(name), offset(offset) {}
+        Entry(const std::string &name, int64_t offset, uint16_t flags) : name(name), offset(offset), flags(flags), data(nullptr) {}
         std::string name;
-        uint32_t offset;
+        int64_t offset;
+		uint16_t flags;
+		void *data;
     };
 
     std::vector<Entry> entries;
+	char* comment = nullptr;
 
     ZipStream(const std::string &zipName) : zipName(zipName)
     {
         fp = fopen(zipName.c_str(), "rb");
+		if (!fp)
+			return;
         uint32_t id = 0;
-        // TODO: Read entire 64K+22 bytes when we need to skip comment
         fseek_x(fp, -22 + 5, SEEK_END);
         while (id != 0x06054b50)
         {
             fseek_x(fp, -5, SEEK_CUR);
             id = read<uint32_t>();
         }
+		auto start = ftell_x(fp);
         fseek_x(fp, 4, SEEK_CUR);
-        int entryCount = read<uint16_t>();
+        int64_t entryCount = read<uint16_t>();
         fseek_x(fp, 2, SEEK_CUR);
         auto cdSize = read<uint32_t>();
-        auto cdOffset = read<uint32_t>();
-        // printf("%d entries at offset %x\n", entryCount, cdOffset);
+        int64_t cdOffset = read<uint32_t>();
+		auto commentLen = read<uint16_t>();
+		if (commentLen > 0)
+		{
+			comment = new char [commentLen+1];
+			fread(comment, 1, commentLen, fp);
+			comment[commentLen] = 0;
+		}
+
+		if(entryCount == 0xffff || cdOffset == 0xffffffff)
+		{
+			fseek_x(fp, start - 6*4, SEEK_SET);
+			auto id = read<uint32_t>();
+			if(id != 0x07064b50)
+			{
+				error("Illegal 64bit format");
+			}
+			fseek_x(fp, 4, SEEK_CUR);
+			auto cdStart = read<int64_t>();
+			fseek_x(fp, cdStart, SEEK_SET);
+			auto eocd64 = read<EndOfCentralDir64>();
+
+			cdOffset = eocd64.cdoffset;	
+			entryCount = eocd64.entries;
+		}
+
+		entries.reserve(entryCount);
+
         fseek_x(fp, cdOffset, SEEK_SET);
-        char fileName[2048];
+        char fileName[65536];
         CentralDirEntry cd;
-        for (int i = 0; i < entryCount; i++)
+        for (auto i = 0L; i < entryCount; i++)
         {
             fread(&cd, 1, sizeof(CentralDirEntry), fp);
-            int rc =
-                fread(&fileName, 1,
-                    cd.nameLen > sizeof(fileName) - 1 ? sizeof(fileName) - 1 : cd.nameLen, fp);
+            int rc = fread(&fileName, 1, cd.nameLen , fp);
             fileName[rc] = 0;
             fseek_x(fp, cd.nameLen - rc, SEEK_CUR);
-            fseek_x(fp, cd.exLen + cd.commLen, SEEK_CUR);
-            // printf("%d: %s\n", i, fileName);
-            entries.emplace_back(fileName, cd.offset + 0);
+			int64_t offset = cd.offset;
+			int exLen = cd.exLen;
+			Extra extra;
+			while(exLen > 0)
+			{
+				fread(&extra, 1, 4, fp);
+				fread(extra.data, 1, extra.size, fp);
+				if(extra.id == 0x01)
+				{
+					offset = extra.zip64.offset;
+				}
+				exLen -= (extra.size+4);
+			}
+
+            fseek_x(fp, cd.commLen, SEEK_CUR);
+            entries.emplace_back(fileName, offset + 0, cd.attr1 >> 16);
         }
     }
 
+	~ZipStream()
+	{
+		if (fp)
+			fclose(fp);
+		if (comment)
+			delete [] comment;
+	}
+
+	bool valid() const { return fp != nullptr; }
+
     int size() const { return entries.size(); }
-    Entry getEntry(int i) { return entries[i]; }
+    Entry& getEntry(int i) { return entries[i]; }
     const Entry& getEntry(int i) const { return entries[i]; }
 
     template<typename T> T read()
@@ -167,6 +299,10 @@ private:
 	std::string zipName;
     FILE *fp;
 };
+
+inline void readExtra(FILE *fp, int exLen)
+{
+}
 
 class ZipArchive
 {
@@ -187,9 +323,9 @@ public:
 
     uint8_t *entries;
     uint8_t *entryPtr;
-    int entryCount;
+    uint64_t entryCount;
     bool zipAlign = false;
-    bool zip64 = false;
+    bool force64 = false;
 
     ~ZipArchive()
     {
@@ -199,26 +335,33 @@ public:
 
     void doAlign(bool align) { zipAlign = align; }
 
+	// NOTE: In case you need to support big endian you need to overload write()
     template<typename T> void write(const T &t) { fwrite(&t, 1, sizeof(T), fp); }
 
     void write(const std::string &s) { fwrite(s.c_str(), 1, s.length(), fp); }
 
     void write(const uint8_t *data, uint64_t size) { fwrite(data, 1, size, fp); }
 
+    void addFile(const std::string &fileName, bool store = false, uint64_t compSize = 0,
+        uint64_t uncompSize = 0, time_t ts = 0, uint32_t crc = 0, uint16_t flags = 0)
+    {
+		ZipEntry ze;
+		ze.data = nullptr;
+		ze.name = fileName;
+		ze.store = store;
+		ze.dataSize = compSize;
+		ze.originalSize = uncompSize;
+		ze.timeStamp = ts;
+		ze.crc = crc;
+		ze.flags = flags;
+		add(ze);
+	}
     void add(const ZipEntry &entry)
     {
-        addFile(entry.name, entry.store, entry.dataSize, entry.originalSize, entry.timeStamp,
-            entry.crc);
-        write(entry.data, entry.dataSize);
-    }
-
-    void addFile(const std::string &fileName, bool store = false, uint64_t compSize = 0,
-        uint64_t uncompSize = 0, time_t ts = 0, uint32_t crc = 0)
-    {
         static LocalEntry head = {0x04034b50, 10, 0, 0, 0, 0, 0, 0, 0, 0};
-        struct Extra64 extra64 = {0x1, 32, 0, 0, 0, 0};
+        static Extra64 extra64 = {0x1, 28, 0, 0, 0, 0};
         static const uint8_t zeroes[] = {0, 0, 0, 0};
-        const struct tm *lt = localtime(&ts);
+        const struct tm *lt = localtime(&entry.timeStamp);
         // date:   YYYYYYYM MMMDDDDD
         // time:   HHHHHMMM MMMSSSSS
         uint32_t msdos_ts = ((lt->tm_year - 80) << 25) | ((lt->tm_mon + 1) << 21) |
@@ -227,32 +370,37 @@ public:
 
         lastHeader = ftell_x(fp);
 
-        int fl = fileName.length();
+        int fl = entry.name.length();
         CentralDirEntry *e = (CentralDirEntry*)entryPtr;
 
-        bool ext64 = (compSize > 0xfffffffe || uncompSize > 0xfffffffe || lastHeader > 0xfffffffe);
+		bool ext64 = force64;
+		if(!ext64)
+        	ext64 = (entry.dataSize > 0xfffffffe || entry.originalSize > 0xfffffffe || lastHeader > 0xfffffffeL);
 
         memset(e, 0, sizeof(CentralDirEntry));
         e->sig = 0x02014b50;
         e->v1 = 20;
-        e->method = store ? 0 : 8;
-        e->crc = crc;
-        e->compSize = ext64 ? 0xffffffff : compSize;
-        e->uncompSize = ext64 ? 0xffffffff : uncompSize;
+        e->method = entry.store ? 0 : 8;
+        e->crc = entry.crc;
+        e->compSize = ext64 ? 0xffffffff : entry.dataSize;
+        e->uncompSize = ext64 ? 0xffffffff : entry.originalSize;
         e->nameLen = fl;
         e->offset = ext64 ? 0xffffffff : lastHeader;
         e->dateTime = msdos_ts;
+		e->attr1 = entry.flags << 16;
 
         entryPtr += sizeof(CentralDirEntry);
-        memcpy(entryPtr, fileName.c_str(), fl);
+        memcpy(entryPtr, entry.name.c_str(), fl);
         entryPtr += fl;
+		
+		//ext64 = true;
 
         if (ext64)
         {
             e->v1 = 45;
-            e->exLen = sizeof(Extra64);
-            extra64.compSize = compSize;
-            extra64.uncompSize = uncompSize;
+            e->exLen += sizeof(Extra64);
+            extra64.compSize = entry.dataSize;
+            extra64.uncompSize = entry.originalSize;
             extra64.offset = lastHeader;
             memcpy(entryPtr, &extra64, sizeof(Extra64));
             entryPtr += sizeof(Extra64);
@@ -263,16 +411,16 @@ public:
         // printf("Added %d files in %ld bytes\n", entryCount, entryPtr - entries);
 
         // lastHeader 30 bytes
-        head.method = store ? 0 : 8;
-        head.crc = crc;
+        head.method = entry.store ? 0 : 8;
+        head.crc = entry.crc;
         head.v1 = 20;
-        head.compSize = ext64 ? 0xffffffff : compSize;
-        head.uncompSize = ext64 ? 0xffffffff : uncompSize;
+        head.compSize = ext64 ? 0xffffffff : entry.dataSize;
+        head.uncompSize = ext64 ? 0xffffffff : entry.originalSize;
         head.dateTime = msdos_ts;
         head.nameLen = fl;
         head.exLen = 0;
 
-        if (store && zipAlign)
+        if (entry.store && zipAlign)
             head.exLen = 4 - (lastHeader + fl + sizeof(LocalEntry)) % 4;
 
         if (ext64)
@@ -282,7 +430,7 @@ public:
         }
 
         write(head);
-        write(fileName);
+        write(entry.name);
 
         if (ext64)
         {
@@ -292,6 +440,8 @@ public:
         {
             write(zeroes, head.exLen);
         }
+		if (entry.data)
+	        write(entry.data, entry.dataSize);
     }
 
     void close()
@@ -303,10 +453,27 @@ public:
 
         auto endCD = ftell_x(fp);
 
-        if (entryCount > 0xfffe)
-            zip64 = true;
+		bool end64 = force64;
+		if(!end64)
+		{
+		   	if(entryCount > 0xfffe || startCD > 0xfffffffeL)
+	            end64 = true;
+		}
 
-        if (zip64)
+		if(end64)
+		{
+			EndOfCentralDir64 eod64 = {
+				0x06064b50, 44, 0x031e, 45, 0, 0, entryCount, entryCount, sizeCD, startCD
+			};
+			write(eod64);
+            // Locator
+            write<uint32_t>(0x07064b50);
+            write<uint32_t>(0);
+            write<uint64_t>(endCD);
+            write<uint32_t>(1);
+		}
+/*
+        if (end64)
         {
             write<uint32_t>(0x06064b50);
             write<uint64_t>(44);
@@ -325,14 +492,14 @@ public:
             write<uint64_t>(endCD);
             write<uint32_t>(1);
         }
-
+*/
         write<uint32_t>(0x06054b50);
         write<uint16_t>(0);
         write<uint16_t>(0);
-        write<uint16_t>(zip64 ? 0xffff : entryCount);
-        write<uint16_t>(zip64 ? 0xffff : entryCount);
+        write<uint16_t>(end64 ? 0xffff : entryCount);
+        write<uint16_t>(end64 ? 0xffff : entryCount);
         write<uint32_t>(sizeCD);
-        write<uint32_t>(startCD);
+        write<uint32_t>(end64 ? 0xffffffff : startCD);
 
         write<uint16_t>(0);
 

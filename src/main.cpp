@@ -56,7 +56,7 @@ BENCHMARK_MAIN();
 
 const string helpText =
     R"(
-Fastzip v1.0 by Jonas Minnberg
+Fastzip v1.1 by Jonas Minnberg
 (c) 2015 Unity Technologies
 
 Usage: fastzip [options] <zipfile> <paths...>
@@ -65,6 +65,9 @@ Usage: fastzip [options] <zipfile> <paths...>
 -t | --threads=<n>                     Worker thread count. Defaults to number
                                        of CPU cores.
 -v | --verbose                         Print filenames.
+-d | --destination                     Destination directory for extraction.
+                                       Defaults to 'smart' root directory. Use
+                                       '-d .' for standard (unzip) behavour. 
 -X | x                                 Extract mode. Options below are ignored.      
 -S | --sign[=<kstore>[,<pw>[,<name>]]] Jarsign the zip using the keystore file.
 -e | --early-out=<percent>             Set worst detected compression for
@@ -133,6 +136,7 @@ int main(int argc, char **argv)
     int packLevel = 5;
     int packMode = INFOZIP;
     bool noFiles = true;
+	string destDir;
 	bool extractMode = false;
 
 #ifdef _WIN32
@@ -145,7 +149,7 @@ int main(int argc, char **argv)
     string HOME = getenv("HOME");
 #endif
 
-	if(strcmp(argv[1], "x") && !fileExists("x"))
+	if(strcmp(argv[1], "x") == 0 && !fileExists("x"))
 		extractMode = true;
 
     for (int i = 1; i < argc; i++)
@@ -253,6 +257,14 @@ int main(int argc, char **argv)
 			{
 				extractMode = true;
 			}
+			else if (name == "destination" || opt == 'd')
+			{
+				destDir = argv[++i];
+			}
+			else if (name == "zip64")
+			{
+				fs.force64 = true;
+			}
 			else if(name == "help" || opt == 'h')
 			{
 				// Do nothing here
@@ -323,6 +335,7 @@ int main(int argc, char **argv)
 		fuz.zipName = fs.zipfile;
 		fuz.threadCount = fs.threadCount;
 		fuz.verbose = fs.verbose;
+		fuz.destinationDir = destDir;
 		fuz.exec();
 		return 0;
 	}

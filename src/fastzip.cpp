@@ -439,6 +439,7 @@ void Fastzip::exec()
     remove(target);
     ZipArchive zipArchive(target, fileNames.size() + 5, strLen + 1024);
     zipArchive.doAlign(zipAlign);
+	zipArchive.force64 = force64;
 
     char *digestFile = new char[strLen + fileNames.size() * 6400];
     char *digestPtr = digestFile;
@@ -452,7 +453,7 @@ void Fastzip::exec()
 
     for (int i = 0; i < threadCount; i++)
     {
-        workerThreads[i] = thread( [&]()
+        workerThreads[i] = thread([&]
         {
             while (true)
             {
@@ -460,8 +461,6 @@ void Fastzip::exec()
 				int index;
                 {
                     lock_guard<mutex> lock {m};
-                    if (ftell_x(zipArchive.getFile()) > (int64_t)0xff000000)
-                        return;
                     if (fileNames.size() == 0)
                         return;
                     fileName = fileNames.front();
@@ -507,6 +506,9 @@ void Fastzip::exec()
                     if (stat(fileName.source.c_str(), &ss) == 0)
                     {
                         entry.timeStamp = ss.st_mtime;
+						entry.flags = ss.st_mode;
+						entry.uid = ss.st_uid;
+						entry.gid = ss.st_gid;
                         dataSize = ss.st_size;
                     }
                     else
@@ -526,13 +528,13 @@ void Fastzip::exec()
                         // Add directories?
                         skipFile = true;
                     }
-
+/*
                     if (ss.st_size >= 0x60000000)
                     {
                         warning(string("Skipping large file " + fileName.source));
                         skipFile = true;
                     }
-
+*/
                     dataSize = entry.originalSize = ss.st_size;
                 }
 
@@ -562,7 +564,7 @@ void Fastzip::exec()
                         int percent = 0;
                         if (entry.originalSize > 0)
                             percent = entry.dataSize * 100 / (int)entry.originalSize;
-                        printf("%s %dKB (%s %d%%)\n", entry.name.c_str(),
+                        printf("%d %s %dKB (%s %d%%)\n", index, entry.name.c_str(),
                             (int)(entry.dataSize / 1024),
                             entry.store ? "stored" : "deflated",
                             entry.store ? 100 : percent);
@@ -611,10 +613,10 @@ void Fastzip::exec()
 
     for (int i = 0; i < threadCount; i++)
         workerThreads[i].join();
-
+/*
     if (ftell_x(zipArchive.getFile()) > (int64_t)0xff000000)
         throw fastzip_exception("Resulting file too large");
-
+*/
     if (doSign)
     {
         lock_guard<mutex> lock {m};

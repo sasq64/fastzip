@@ -126,6 +126,7 @@ TEST_CASE("basic", "")
 	// BIG TEST
 
 }
+#if 0
 TEST_CASE("big", "")
 {
 	removeFiles("temp/outbig");
@@ -133,7 +134,7 @@ TEST_CASE("big", "")
 	zipUnzip("zeros.img", "temp/test_big.zip", "temp/out");
 	//REQUIRE(compareDir("zero", "temp/out/zipalot") == true);
 }
-
+#endif
 TEST_CASE("64k", "")
 {
 	removeFiles("temp/out");
@@ -144,7 +145,7 @@ TEST_CASE("64k", "")
 	REQUIRE(compareDir("temp/zipalot", "temp/out/zipalot") == true);
 
 	// TODO: Seq, Sign, Intel, Uncompressed, include zip
-	//
+	// smart dest dir, links, directories, permissions
 	// BIG TEST
 
 }
