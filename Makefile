@@ -26,7 +26,7 @@ LD = $(CXX)
 YASM = yasm
 OBJDIR = obj
 SRCDIR = src
-CFLAGS = -g -O0 -I$(SRCDIR)/igzip -I$(SRCDIR)/infozip -I$(SRCDIR)/openssl/include -Wno-deprecated-declarations -Wno-unused-result
+CFLAGS = -g -O2 -I$(SRCDIR)/igzip -I$(SRCDIR)/infozip -I$(SRCDIR)/openssl/include -Wno-deprecated-declarations -Wno-unused-result
 CFLAGS += -Wall -Wno-unused-variable -Wno-unused-function
 ASMFLAGS=-I $(SRCDIR)/igzip
 LIBS = -lcrypto
@@ -70,10 +70,9 @@ CXXFLAGS=$(CFLAGS) -std=c++11
 #CC=gcc
 LD=$(CXX)
 
-OBJFILES= \
+OBJFILES := \
   $(OBJDIR)/fastzip_keystore.o \
   $(OBJDIR)/inflate.o \
-  $(OBJDIR)/main.o \
   $(OBJDIR)/utils.o \
   $(OBJDIR)/fastzip.o \
   $(OBJDIR)/funzip.o \
@@ -102,9 +101,12 @@ ifeq ($(WITH_INTEL),1)
   CFLAGS += -DWITH_INTEL
 endif
 
+TESTFILES := $(OBJFILES) $(OBJDIR)/testmain.o $(OBJDIR)/test.o
+OBJFILES += $(OBJDIR)/main.o
+
 VERSION=_`date "+%y%m%d"`
 
-all : $(TARGET)
+all : $(TARGET) test
 
 dist :
 	$(MAKE) -C .
@@ -159,3 +161,5 @@ endif
 $(TARGET): $(OBJFILES) $(LIBMODS) $(DEPS)
 	$(PREFIX)$(LD) -o $(TARGET) $(OBJFILES) $(LIBMODS) $(LIBS) $(LDFLAGS)
 
+test : $(TESTFILES) $(LIBMODS) $(DEPS)
+	$(PREFIX)$(LD) -o test $(TESTFILES) $(LIBMODS) $(LIBS) $(LDFLAGS)

@@ -118,6 +118,7 @@ template<class CONTAINER> int listFiles(const std::string &dirName, CONTAINER &r
 
 void listFiles(char *dirName, std::function<void(const std::string &path)> &f);
 void listFiles(const std::string &dirName, std::function<void(const std::string &path)> f);
+void removeFiles(const std::string &dirName);
 
 template<typename T> class UniQueue : public std::deque<std::reference_wrapper<const T> >
 {
@@ -190,5 +191,9 @@ void makedir(const std::string &name);
 void makedirs(const std::string &path);
 std::string path_directory(const std::string &name);
 std::string path_filename(const std::string &name);
+std::string path_basename(const std::string &name);
+
+bool startsWith(const std::string &name, const std::string &pref);
+
 
 #endif // UTILS_H

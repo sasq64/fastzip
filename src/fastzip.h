@@ -78,6 +78,7 @@ public:
     std::string keyName;
     int threadCount = 1;
     int earlyOut = 98;
+	bool force64 = false;
 
     // Add a file to be packed into the target zip
     void addZip(std::string zipName, PackFormat format);

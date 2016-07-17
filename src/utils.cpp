@@ -23,6 +23,18 @@ void makedirs(const std::string &path) {
 	}
 }
 
+std::string path_basename(const std::string &name) {
+	auto slashPos = name.rfind('/');
+	if(slashPos == std::string::npos)
+		slashPos = 0;
+	else
+		slashPos++;
+	auto dotPos = name.rfind('.');
+	if(dotPos == std::string::npos || dotPos < slashPos)
+		return name.substr(slashPos);
+	return name.substr(slashPos, dotPos-slashPos);
+}
+
 std::string path_directory(const std::string &name) {
 	auto slashPos = name.rfind('/');
 	if(slashPos == std::string::npos)
@@ -37,6 +49,11 @@ std::string path_filename(const std::string &name) {
 	else
 		slashPos++;
 	return name.substr(slashPos);
+}
+
+bool startsWith(const std::string &name, const std::string &pref) {
+	auto pos = name.find(pref);
+	return (pos == 0);
 }
 
 
@@ -106,4 +123,53 @@ uint32_t msdosToUnixTime(uint32_t m)
     t.tm_sec = m & 0x1f;
     t.tm_isdst = -1;
     return mktime(&t);
+}
+
+void removeFiles(char *dirName)
+{
+    DIR *dir;
+    struct dirent *ent;
+
+    struct stat ss;
+    stat(dirName, &ss);
+    if ((ss.st_mode & S_IFDIR) == 0)
+    {
+		remove(dirName);
+        return;
+    }
+
+	std::vector<std::string> toRemove;
+    if ((dir = opendir(dirName)) != nullptr)
+    {
+        char *dirEnd = dirName + strlen(dirName);
+        *dirEnd++ = PATH_SEPARATOR;
+        *dirEnd = 0;
+        int dirLen = strlen(dirName);
+        while ((ent = readdir(dir)) != nullptr)
+        {
+            char *p = ent->d_name;
+            if (p[0] == '.' && (p[1] == 0 || (p[1] == '.' && p[2] == 0)))
+                continue;
+
+            strcpy(dirEnd, p);
+#ifdef _WIN32
+            stat(dirName, &ss);
+            if ((ss.st_mode & S_IFDIR) != 0)
+#else
+            if (ent->d_type == DT_DIR)
+#endif
+			 	removeFiles(dirName);
+			toRemove.push_back(dirName);
+        }
+        closedir(dir);
+		for(const auto &t : toRemove)
+			remove(t.c_str());
+    }
+}
+
+void removeFiles(const std::string &dirName)
+{
+	char d[16384];
+	strcpy(d, dirName.c_str());
+	removeFiles(d);
 }

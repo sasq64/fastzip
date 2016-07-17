@@ -9,4 +9,5 @@ public:
 	std::string zipName;
 	int threadCount = 8;
 	bool verbose = false;
+	std::string destinationDir;
 };
