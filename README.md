@@ -9,7 +9,7 @@ by _Jonas Minnberg_ (jonasmi@unity3d.com)
 
 ## Build (Unix/OSX)
 
-* Make sure you have *yasm* and *openssl* installed.
+* Make sure you have *yasm* and *openssl* installed. (`apt-get install yasm libssl-dev`)
 * `make`
 * `WITH_INTEL=0 make` - Build without Intel code.
 * `./test.py` - Simple functional test

@@ -21,7 +21,7 @@
 #include <mutex>
 
 #endif
-
+#include <atomic>
 #include <unistd.h>
 #include <sys/time.h>
 #include <assert.h>
