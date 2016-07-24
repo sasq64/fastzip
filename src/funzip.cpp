@@ -1,6 +1,6 @@
 #include "funzip.h"
-
-#include "ziparchive.h"
+#include "zipformat.h"
+#include "zipstream.h"
 #include "inflate.h"
 #include "utils.h"
 

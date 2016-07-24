@@ -98,7 +98,6 @@ private:
 
     void packZipData(FILE *fp, int size, PackFormat inFormat, PackFormat outFormat, uint8_t *sha,
         ZipEntry &target);
-    void sign(ZipArchive &archive, const std::string &digestFile);
 
     UniQueue<FileTarget> fileNames;
     int strLen = 0;

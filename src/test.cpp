@@ -98,7 +98,11 @@ void zipUnzip(const std::string &dirName, const std::string &zipName, const std:
 	if(flags & SEQ)
 		fs.doSeq = true;
 	if(flags & SIGN)
+	{
+		fs.keyPassword = "fastzip";
 		fs.doSign = true;
+	}
+
 	fs.addDir(dirName, PackFormat::ZIP5_COMPRESSED);
 	fs.zipfile = zipName;
 	fs.exec();
@@ -114,13 +118,21 @@ TEST_CASE("basic", "")
 	removeFiles("temp/test.zip");
 	if(!fileExists("temp/zipme"))
 		createFiles("temp/zipme/f", 10, 128*1024);
-	zipUnzip("temp/zipme", "temp/test.zip", "temp/out");
-	REQUIRE(compareDir("temp/zipme", "temp/out/zipme") == true);
-	removeFiles("temp/out64");
-	removeFiles("temp/test64.zip");
-	zipUnzip("temp/zipme", "temp/test64.zip", "temp/out64", FORCE64);
-	REQUIRE(compareDir("temp/zipme", "temp/out64/zipme") == true);
-	
+
+	SECTION("Create normal zip") {
+		zipUnzip("temp/zipme", "temp/test.zip", "temp/out");
+		REQUIRE(compareDir("temp/zipme", "temp/out/zipme") == true);
+	}
+
+	SECTION("Create zip with zip64 extension") {
+		zipUnzip("temp/zipme", "temp/test.zip", "temp/out", FORCE64);
+		REQUIRE(compareDir("temp/zipme", "temp/out/zipme") == true);
+	}
+
+	SECTION("Create signed zip") {
+		zipUnzip("temp/zipme", "temp/test.zip", "temp/out", SIGN);
+		REQUIRE(compareDir("temp/zipme", "temp/out/zipme") == true);
+	}
 	// TODO: Seq, Sign, Intel, Uncompressed, include zip
 	//
 	// BIG TEST
@@ -134,7 +146,6 @@ TEST_CASE("big", "")
 	zipUnzip("zeros.img", "temp/test_big.zip", "temp/out");
 	//REQUIRE(compareDir("zero", "temp/out/zipalot") == true);
 }
-#endif
 TEST_CASE("64k", "")
 {
 	removeFiles("temp/out");
@@ -149,4 +160,5 @@ TEST_CASE("64k", "")
 	// BIG TEST
 
 }
+#endif
 

@@ -72,12 +72,15 @@ LD=$(CXX)
 
 OBJFILES := \
   $(OBJDIR)/fastzip_keystore.o \
+  $(OBJDIR)/ziparchive.o \
+  $(OBJDIR)/zipstream.o \
   $(OBJDIR)/inflate.o \
   $(OBJDIR)/utils.o \
   $(OBJDIR)/fastzip.o \
   $(OBJDIR)/funzip.o \
   $(OBJDIR)/asn.o \
   $(OBJDIR)/crypto.o \
+  $(OBJDIR)/sign.o \
   $(OBJDIR)/crc32/Crc32.o \
   $(OBJDIR)/infozip.o \
   $(OBJDIR)/infozip/deflate.o \
