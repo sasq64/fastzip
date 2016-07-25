@@ -19,11 +19,19 @@ ZipStream::ZipStream(const std::string &zipName) : zipName(zipName)
 		return;
 	uint32_t id = 0;
 	fseek_x(fp, -22 + 5, SEEK_END);
-	while (id != EndOfCD_SIG)
+	int counter = 64*1024+8;
+	while (id != EndOfCD_SIG && counter > 0)
 	{
 		fseek_x(fp, -5, SEEK_CUR);
 		id = read<uint32_t>();
+		counter--;
 	}
+	if(counter <= 0)
+	{
+		fp = nullptr;
+		return;
+	}
+
 	auto start = ftell_x(fp);
 	fseek_x(fp, 4, SEEK_CUR);
 	int64_t entryCount = read<uint16_t>();
@@ -44,7 +52,8 @@ ZipStream::ZipStream(const std::string &zipName) : zipName(zipName)
 		auto id = read<uint32_t>();
 		if(id != EndOfCD64Locator_SIG)
 		{
-			error("Illegal 64bit format");
+			fp = nullptr;
+			return;
 		}
 		fseek_x(fp, 4, SEEK_CUR);
 		auto cdStart = read<int64_t>();

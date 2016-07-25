@@ -1,8 +1,20 @@
 #pragma once
 
 #include <string>
+#include <exception>
 
 class ZipStream;
+
+class funzip_exception : public std::exception
+{
+public:
+    funzip_exception(const std::exception &e) : msg(e.what()) {}
+    funzip_exception(const char *ptr = "Unzip exception") : msg(ptr) {}
+    virtual const char *what() const throw () { return msg; }
+private:
+    const char *msg;
+};
+
 
 class FUnzip {
 public:

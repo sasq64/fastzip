@@ -25,6 +25,9 @@ by _Jonas Minnberg_ (jonasmi@unity3d.com)
 
     fastzip <directory>
     fastzip <file.zip> <paths>...
+
+	fastzip -x <file.zip>
+
 	fastzip --help
 
 ## Speed Tests

@@ -113,7 +113,7 @@ all : $(TARGET) test
 
 dist :
 	$(MAKE) -C .
-	WITH_INTEL=0 HOST=windows PREFIX=x86_64-w64-mingw32- $(MAKE) -C .
+	WITH_INTEL=0 HOST=windows PREFIX=x86_64-apple-darwin13.4.0- SUFFIX=-5 $(MAKE) -C .
 	strip fastzip
 	x86_64-w64-mingw32-strip fastzip.exe
 	./fastzip fastzip$(VERSION).zip fastzip.exe=win/fastzip.exe fastzip=mac/fastzip
@@ -149,11 +149,11 @@ clean:
 
 $(OBJDIR)/%.o: $(SRCDIR)/%.c
 	@mkdir -p $(@D)
-	$(PREFIX)$(CC) -c $(CFLAGS) $< -o $@
+	$(PREFIX)$(CC)$(SUFFIX) -c $(CFLAGS) $< -o $@
 
 $(OBJDIR)/%.o: $(SRCDIR)/%.cpp
 	@mkdir -p $(@D)
-	$(PREFIX)$(CXX) -c $(CXXFLAGS) $< -o $@
+	$(PREFIX)$(CXX)$(SUFFIX) -c $(CXXFLAGS) $< -o $@
 
 $(OBJDIR)/%.o: $(SRCDIR)/%.asm
 	@mkdir -p $(@D)
@@ -162,7 +162,7 @@ $(OBJDIR)/%.o: $(SRCDIR)/%.asm
 endif
 
 $(TARGET): $(OBJFILES) $(LIBMODS) $(DEPS)
-	$(PREFIX)$(LD) -o $(TARGET) $(OBJFILES) $(LIBMODS) $(LIBS) $(LDFLAGS)
+	$(PREFIX)$(LD)$(SUFFIX) -o $(TARGET) $(OBJFILES) $(LIBMODS) $(LIBS) $(LDFLAGS)
 
 test : $(TESTFILES) $(LIBMODS) $(DEPS)
-	$(PREFIX)$(LD) -o test $(TESTFILES) $(LIBMODS) $(LIBS) $(LDFLAGS)
+	$(PREFIX)$(LD)$(SUFFIX) -o test $(TESTFILES) $(LIBMODS) $(LIBS) $(LDFLAGS)

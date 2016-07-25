@@ -67,9 +67,6 @@ static int store_compressed(FILE *fp, int inSize, uint8_t *target, uint8_t *sha)
 		stream.next_in = fileData;
         stream.avail_in = inSize;
 
-        stream.next_out = buf;
-        stream.avail_out = bufSize;
-
         SHA_CTX context;
         SHA_Init(&context);
 
@@ -78,10 +75,7 @@ static int store_compressed(FILE *fp, int inSize, uint8_t *target, uint8_t *sha)
             stream.next_out = buf;
             stream.avail_out = bufSize;
             mz_inflate(&stream, MZ_SYNC_FLUSH);
-            if (sha)
-            {
-                SHA1_Update(&context, buf, bufSize - stream.avail_out);
-            }
+			SHA1_Update(&context, buf, bufSize - stream.avail_out);
             total += (bufSize - stream.avail_out);
         }
         

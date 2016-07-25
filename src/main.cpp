@@ -55,7 +55,7 @@ BENCHMARK_MAIN();
 #else
 
 const string helpText =
-    R"(
+R"(
 Fastzip v1.1 by Jonas Minnberg
 (c) 2015 Unity Technologies
 
@@ -114,7 +114,7 @@ static void error(const string &msg)
 {
     printf("\n**Error: %s\n", msg.c_str());
     fflush(stdout);
-    exit(-1);
+    exit(1);
 }
 
 static void warning(const string &msg)
@@ -149,10 +149,14 @@ int main(int argc, char **argv)
     string HOME = getenv("HOME");
 #endif
 
+	int i = 1;
 	if(strcmp(argv[1], "x") == 0 && !fileExists("x"))
+	{
 		extractMode = true;
+		i++;
+	}
 
-    for (int i = 1; i < argc; i++)
+    for (; i < argc; i++)
     {
         if (argv[i][0] == '-')
         {
@@ -336,7 +340,14 @@ int main(int argc, char **argv)
 		fuz.threadCount = fs.threadCount;
 		fuz.verbose = fs.verbose;
 		fuz.destinationDir = destDir;
-		fuz.exec();
+		try
+		{
+			fuz.exec();
+		}
+		catch(funzip_exception &e)
+		{
+			error(e.what());
+		}
 		return 0;
 	}
 

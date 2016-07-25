@@ -23,6 +23,7 @@
 #endif
 #include <atomic>
 #include <unistd.h>
+#include <cstring>
 #include <sys/time.h>
 #include <assert.h>
 #include <fcntl.h>
@@ -53,7 +54,7 @@ static int64_t uncompress(FILE *fout, int64_t inSize, FILE *fin)
 
 	mz_stream stream;
 	memset(&stream, 0, sizeof(stream));
-	int rc = mz_inflateInit2(&stream, -MZ_DEFAULT_WINDOW_BITS);
+	mz_inflateInit2(&stream, -MZ_DEFAULT_WINDOW_BITS);
 
 	uint8_t *data;
 
@@ -66,8 +67,8 @@ static int64_t uncompress(FILE *fout, int64_t inSize, FILE *fin)
 	} else
 		data = new uint8_t [bufSize];
 
-	rc = MZ_OK;
-	while (rc != MZ_STREAM_END)
+	int rc = MZ_OK;
+	while (rc == MZ_OK)
 	{
 		if(stream.avail_in == 0)
 		{
@@ -85,6 +86,8 @@ static int64_t uncompress(FILE *fout, int64_t inSize, FILE *fin)
 		fwrite(buf, 1, bufSize - stream.avail_out, fout);
 		total += (bufSize - stream.avail_out);
 	}
+	if(rc < 0)
+		throw funzip_exception("Inflate failed");
 	
 	mz_inflate(&stream, MZ_FINISH);
 
@@ -171,10 +174,7 @@ void FUnzip::exec()
 	atomic<int> entryNum(0);
 	ZipStream zs{ zipName };
 	if (!zs.valid())
-	{
-		fprintf(stderr, "**Error: Could not open '%s'\n", zipName.c_str());
-		exit(1);
-	}
+		throw funzip_exception("Not a zip file");
 
 	if(zs.size() == 0)
 		return;
@@ -219,7 +219,7 @@ void FUnzip::exec()
 
 				fseek_x(fp, e.offset, SEEK_SET);
 				if (fread(&le, 1, sizeof(le), fp) != sizeof(le))
-					exit(-1);
+					throw funzip_exception("Corrupt zipfile");
 
 				fseek_x(fp, le.nameLen, SEEK_CUR);
 				int gid = -1;
@@ -240,8 +240,9 @@ void FUnzip::exec()
 				FILE* fpout = fopen(name.c_str(), "wb");
 				if(!fpout)
 				{
-					fprintf(stderr, "**Error: Could not open '%s' for writing\n", name.c_str());
-					perror("Reason:");
+					char errstr[128];
+					strerror_r(errno, errstr, sizeof(errstr));
+					fprintf(stderr, "**Warning: Could not write '%s' (%s)\n", name.c_str(), errstr);
 					continue;
 				}
 				if(le.method == 0)
@@ -266,7 +267,7 @@ void FUnzip::exec()
 		auto &e = zs.getEntry(i);
 		fseek_x(fp, e.offset, SEEK_SET);
 		if (fread(&le, 1, sizeof(le), fp) != sizeof(le))
-			exit(-1);
+			throw funzip_exception("Corrupt zipfile");
 
 		fseek_x(fp, le.nameLen, SEEK_CUR);
 		uid = gid = -1;
