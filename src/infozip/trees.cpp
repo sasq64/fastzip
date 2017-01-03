@@ -1094,12 +1094,18 @@ void IZDeflate::bi_windup()
 {
     if (bi_valid > 8) {
         PUTSHORT(bi_buf);
+        bi_valid -= 8;
     } else if (bi_valid > 0) {
         PUTBYTE(bi_buf);
     }
     if (flush_flg) {
         flush_outbuf(out_buf, &out_offset);
     }
+
+    last_bits = bi_valid;
+    if(last_bits == 0)
+      last_bits = 8;
+
     bi_buf = 0;
     bi_valid = 0;
 #ifdef DEBUG

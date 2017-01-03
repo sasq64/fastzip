@@ -45,8 +45,7 @@ using namespace asn1;
 
 const static int SHA_LEN = 20;
 
-int64_t iz_deflate(int level, char *tgt, char *src, unsigned long tgtsize, unsigned long srcsize,
-    int earlyOut);
+int64_t iz_deflate(int level, char *tgt, char *src, unsigned long tgtsize, unsigned long srcsize);
 uint32_t crc32_fast(const void *data, size_t length, uint32_t previousCrc32 = 0);
 
 static int store_compressed(FILE *fp, int inSize, uint8_t *target, uint8_t *sha)
@@ -64,7 +63,7 @@ static int store_compressed(FILE *fp, int inSize, uint8_t *target, uint8_t *sha)
         memset(&stream, 0, sizeof(stream));
         int rc = mz_inflateInit2(&stream, -MZ_DEFAULT_WINDOW_BITS);
         
-		stream.next_in = fileData;
+        stream.next_in = fileData;
         stream.avail_in = inSize;
 
         SHA_CTX context;
@@ -75,11 +74,11 @@ static int store_compressed(FILE *fp, int inSize, uint8_t *target, uint8_t *sha)
             stream.next_out = buf;
             stream.avail_out = bufSize;
             mz_inflate(&stream, MZ_SYNC_FLUSH);
-			SHA1_Update(&context, buf, bufSize - stream.avail_out);
+            SHA1_Update(&context, buf, bufSize - stream.avail_out);
             total += (bufSize - stream.avail_out);
         }
         
-		mz_inflate(&stream, MZ_FINISH);
+        mz_inflate(&stream, MZ_FINISH);
 
         SHA1_Final(sha, &context);
     }
@@ -192,34 +191,51 @@ static PackResult intel_deflate(FILE *fp, size_t inSize, uint8_t *buffer, size_t
     while (stream.end_of_stream == 0);
 
     if (checksum)
-    {
         *checksum = get_checksum(&stream);
-    }
 
     *outSize = *outSize - stream.avail_out;
 
     int percent = (int)(*outSize * 100 / inSize);
-    if (earlyOut && (buffer + *outSize < fileData))
-    {
-        if (percent >= earlyOut)
-        {
-            *outSize = inSize;
-            memcpy(buffer, fileData, inSize);
-            if (checksum)
-            {
-                *checksum = crc32_fast(buffer, inSize);
-            }
-            return RC_STORED;
-        }
-    }
 
     return RC_COMPRESSED;
 }
 
 #endif
+/*
+// Get pointer to next input data
+uint8_t* get(int* count);
+
+void put(uint8_t *ptr, int size);
+
+
+struct  {
+    
+};
+
+pack(In in, Out out) {
+
+}
+
+template <typename FIN, typename FOUT> pack()
+*/
+
+// Shift buffer left, return carry bits
+uint64_t shift_left(uint64_t* data, int size, int n)
+{
+    uint64_t last = 0;
+    data += size;
+    while (size--)
+    {
+        uint64_t& d = *data--;
+        uint64_t t = d << (64 - n);
+        d = (d >> n) | last;
+        last = t;
+    }
+    return last;
+}
 
 static PackResult infozip_deflate(int packLevel, FILE *fp, int inSize, uint8_t *buffer,
-    size_t *outSize, uint32_t *checksum, uint8_t *sha, int earlyOut)
+    size_t *outSize, uint32_t *checksum, uint8_t *sha)
 {
     uint8_t *fileData = buffer + *outSize - inSize;
     if ((int)fread(fileData, 1, inSize, fp) != inSize)
@@ -239,14 +255,14 @@ static PackResult infozip_deflate(int packLevel, FILE *fp, int inSize, uint8_t *
     }
 
     int64_t compSize =
-        iz_deflate(packLevel, (char*)buffer, (char*)fileData, *outSize, inSize, earlyOut);
+        iz_deflate(packLevel, (char*)buffer, (char*)fileData, *outSize, inSize);
     if (compSize == -1)
         return RC_FAILED;
 
     if (compSize == -2)
     {
-        *outSize = inSize;
-        memmove(buffer, fileData, inSize);
+        *outSize = inSize << 3;
+        //memmove(buffer, fileData, inSize);
         return RC_STORED;
     }
 
@@ -258,8 +274,9 @@ static PackResult infozip_deflate(int packLevel, FILE *fp, int inSize, uint8_t *
 void Fastzip::packZipData(FILE *fp, int size, PackFormat inFormat, PackFormat outFormat,
     uint8_t *sha, ZipEntry &target)
 {
-    size_t outSize = size + size / 4 + 1024 * 64;
-
+    // Maximum size for deflate + space for buffer
+    size_t outSize = size + (size / 16383 + 1) * 5 + 64 * 1024;
+    int bits = -1;
     uint8_t *outBuf = new uint8_t[outSize];
     target.store = false;
 
@@ -278,8 +295,12 @@ void Fastzip::packZipData(FILE *fp, int size, PackFormat inFormat, PackFormat ou
         PackResult state;
 
         if (outFormat >= ZIP1_COMPRESSED && outFormat <= ZIP9_COMPRESSED)
+        {
             state =
-                infozip_deflate(outFormat, fp, size, outBuf, &outSize, &target.crc, sha, earlyOut);
+                infozip_deflate(outFormat, fp, size, outBuf, &outSize, &target.crc, sha);
+            bits = outSize & 0x7;
+            outSize = (outSize + 7) >> 3;
+        }
 #ifdef WITH_INTEL
         else if (outFormat == INTEL_COMPRESSED)
             state = intel_deflate(fp, size, outBuf, &outSize, &target.crc, sha, earlyOut);
@@ -426,12 +447,10 @@ void Fastzip::exec()
     }
 
     string tempFile = zipfile + ".fastzip_";
-
-    const char *target = tempFile.c_str();
-    remove(target);
-    ZipArchive zipArchive(target, fileNames.size() + 5, strLen + 1024);
+    remove(tempFile.c_str());
+    ZipArchive zipArchive(tempFile.c_str(), fileNames.size() + 5, strLen + 1024);
     zipArchive.doAlign(zipAlign);
-	zipArchive.doForce64(force64);
+    zipArchive.doForce64(force64);
 
     char *digestFile = new char[strLen + fileNames.size() * 6400];
     char *digestPtr = digestFile;
@@ -439,7 +458,7 @@ void Fastzip::exec()
     mutex m;
     condition_variable seq_cv;
     int currentIndex = 0;
-	int totalCount = fileNames.size();
+    int totalCount = fileNames.size();
 
     vector<thread> workerThreads(threadCount);
 
@@ -450,13 +469,14 @@ void Fastzip::exec()
             while (true)
             {
                 FileTarget fileName;
-				int index;
+                int index;
                 {
                     lock_guard<mutex> lock {m};
+
                     if (fileNames.size() == 0)
                         return;
                     fileName = fileNames.front();
-					index = totalCount - fileNames.size();
+                    index = totalCount - fileNames.size();
                     fileNames.pop_front();
                 }
 
@@ -476,7 +496,13 @@ void Fastzip::exec()
 
                 entry.name = fileName.target;
 
-                if (fileName.offset != 0xffffffff)
+                if (fileName.size != 0)
+                {
+                    fp = fopen(fileName.source.c_str(), "rb");
+                    fseek_x(fp, fileName.offset, SEEK_SET);
+                    dataSize = fileName.size;
+                }
+                else if (fileName.offset != 0xffffffff)
                 {
                     fp = fopen(fileName.source.c_str(), "rb");
                     fseek_x(fp, fileName.offset, SEEK_SET);
@@ -498,9 +524,9 @@ void Fastzip::exec()
                     if (stat(fileName.source.c_str(), &ss) == 0)
                     {
                         entry.timeStamp = ss.st_mtime;
-						entry.flags = ss.st_mode;
-						entry.uid = ss.st_uid;
-						entry.gid = ss.st_gid;
+                        entry.flags = ss.st_mode;
+                        entry.uid = ss.st_uid;
+                        entry.gid = ss.st_gid;
                         dataSize = ss.st_size;
                     }
                     else
@@ -612,7 +638,7 @@ void Fastzip::exec()
     if (doSign)
     {
         lock_guard<mutex> lock {m};
-		keyStore.setCurrentKey(keyName, keyPassword);
+        keyStore.setCurrentKey(keyName, keyPassword);
         sign(zipArchive, keyStore, digestFile);
     }
 

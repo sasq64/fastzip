@@ -51,7 +51,8 @@ struct FileTarget
 
     std::string source;
     std::string target;
-    uint32_t offset = 0xffffffff;
+    uint64_t offset = 0xffffffff;
+    uint64_t size = 0;
     PackFormat packFormat;
 
     bool operator==(const FileTarget &other) const { return other.target == target; }

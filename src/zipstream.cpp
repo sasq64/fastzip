@@ -72,7 +72,7 @@ ZipStream::ZipStream(const std::string &zipName) : zipName(zipName)
 	for (auto i = 0L; i < entryCount; i++)
 	{
 		fread(&cd, 1, sizeof(CentralDirEntry), fp);
-		int rc = fread(&fileName, 1, cd.nameLen , fp);
+		auto rc = fread(&fileName, 1, cd.nameLen , fp);
 		fileName[rc] = 0;
 		fseek_x(fp, cd.nameLen - rc, SEEK_CUR);
 		int64_t offset = cd.offset;
@@ -90,7 +90,10 @@ ZipStream::ZipStream(const std::string &zipName) : zipName(zipName)
 		}
 
 		fseek_x(fp, cd.commLen, SEEK_CUR);
-		entries.emplace_back(fileName, offset + 0, cd.attr1 >> 16);
+		auto flags = cd.attr1 >> 16;
+		if((flags & S_IFREG) == 0) // Some archives have broken attributes
+			flags = 0;
+		entries.emplace_back(fileName, offset + 0, flags >> 16);
 	}
 }
 

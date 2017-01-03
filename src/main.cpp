@@ -16,7 +16,7 @@ using namespace std;
 #include <benchmark/benchmark.h>
 
 int64_t iz_deflate(int level, char *tgt, char *src, unsigned long tgtsize, unsigned long srcsize,
-    int earlyOut);
+                   int earlyOut);
 // Define another benchmark
 static void BM_Inflate(benchmark::State &state)
 {
@@ -44,7 +44,7 @@ static void BM_Inflate(benchmark::State &state)
     }
     while (state.KeepRunning())
     {
-        iz_deflate(4, (char*)&output[0], (char*)&testdata[0], output.size(), testdata.size(), 0);
+        iz_deflate(4, (char *)&output[0], (char *)&testdata[0], output.size(), testdata.size(), 0);
     }
 }
 
@@ -55,12 +55,13 @@ BENCHMARK_MAIN();
 #else
 
 const string helpText =
-R"(
+    R"(
 Fastzip v1.1 by Jonas Minnberg
 (c) 2015 Unity Technologies
 
 Usage: fastzip [options] <zipfile> <paths...>
 
+-l                                     List files in archive.  
 -j | --junk-paths                      Strip initial part of path names.
 -t | --threads=<n>                     Worker thread count. Defaults to number
                                        of CPU cores.
@@ -74,10 +75,10 @@ Usage: fastzip [options] <zipfile> <paths...>
                                        switching to store. Default 98.
 )"
 #ifdef WITH_INTEL
-"-I | --intel                           Intel-mode. Fast compression.\n"
-"-z | --zip                             Zip-mode, better compression (default).\n"
+    "-I | --intel                           Intel-mode. Fast compression.\n"
+    "-z | --zip                             Zip-mode, better compression (default).\n"
 #endif
-R"(-<digit>                               Pack level; 0 = Store only, 1-9 =
+    R"(-<digit>                               Pack level; 0 = Store only, 1-9 =
                                        Zip-mode compression level.
 -s | --seq                             Store files in specified order. Impacts
                                        parallellism.
@@ -103,12 +104,10 @@ $   fastzip myapp.apk --sign=release.keystore,secret -Xmp4,mp3,png -j -2
     -Z packed.zip libs=lib res/* bin/classes.dex assets -0 movies
 )";
 
-static const vector<string> androidNopackExt =
-{
+static const vector<string> androidNopackExt = {
     "jpg",  "jpeg", "png",  "gif", "wav",   "mp2",   "mp3", "ogg", "aac", "mpg",
     "mpeg", "mid",  "midi", "smf", "jet",   "rtttl", "imy", "xmf", "mp4", "m4a",
-    "m4v",  "3gp",  "3gpp", "3g2", "3gpp2", "amr",   "awb", "wma", "wmv"
-};
+    "m4v",  "3gp",  "3gpp", "3g2", "3gpp2", "amr",   "awb", "wma", "wmv"};
 
 static void error(const string &msg)
 {
@@ -136,8 +135,9 @@ int main(int argc, char **argv)
     int packLevel = 5;
     int packMode = INFOZIP;
     bool noFiles = true;
-	string destDir;
-	bool extractMode = false;
+    string destDir;
+    bool extractMode = false;
+    bool listFiles = false;
 
 #ifdef _WIN32
     SYSTEM_INFO sysinfo;
@@ -149,12 +149,12 @@ int main(int argc, char **argv)
     string HOME = getenv("HOME");
 #endif
 
-	int i = 1;
-	if(strcmp(argv[1], "x") == 0 && !fileExists("x"))
-	{
-		extractMode = true;
-		i++;
-	}
+    int i = 1;
+    if (strcmp(argv[1], "x") == 0 && !fileExists("x"))
+    {
+        extractMode = true;
+        i++;
+    }
 
     for (; i < argc; i++)
     {
@@ -193,6 +193,11 @@ int main(int argc, char **argv)
             else if (opt == 'I' || name == "intel")
                 packMode = INTEL_FAST;
 #endif
+            else if (opt == 'l')
+            {
+                listFiles = true;
+                extractMode = true;
+            }
             else if (name == "apk")
             {
                 fs.storeExts = androidNopackExt;
@@ -220,7 +225,7 @@ int main(int argc, char **argv)
                 {
                     PackFormat packFormat =
                         (packLevel == 0 || packMode == INFOZIP ? (PackFormat)packLevel
-                         : INTEL_COMPRESSED);
+                                                               : INTEL_COMPRESSED);
                     fs.addZip(zipName, packFormat);
                 }
                 else
@@ -257,22 +262,23 @@ int main(int argc, char **argv)
                     error("'threads' needs exactly one argument");
                 fs.threadCount = atoi(args[0].c_str());
             }
-			else if (opt == 'x')
-			{
-				extractMode = true;
-			}
-			else if (name == "destination" || opt == 'd')
-			{
-				destDir = argv[++i];
-			}
-			else if (name == "zip64")
-			{
-				fs.force64 = true;
-			}
-			else if(name == "help" || opt == 'h')
-			{
-				// Do nothing here
-			} else
+            else if (opt == 'x')
+            {
+                extractMode = true;
+            }
+            else if (name == "destination" || opt == 'd')
+            {
+                destDir = argv[++i];
+            }
+            else if (name == "zip64")
+            {
+                fs.force64 = true;
+            }
+            else if (name == "help" || opt == 'h')
+            {
+                // Do nothing here
+            }
+            else
                 error("Unknown option");
         }
         else
@@ -283,36 +289,38 @@ int main(int argc, char **argv)
             {
                 PackFormat packFormat =
                     (packLevel == 0 || packMode == INFOZIP ? (PackFormat)packLevel
-                     : INTEL_COMPRESSED);
+                                                           : INTEL_COMPRESSED);
                 fs.addDir(argv[i], packFormat);
                 noFiles = false;
             }
         }
     }
 
-	if (!isatty(fileno(stdin)))
-	{
-		char line[1024];
-		while (true)
-		{
-			if (!fgets(line, sizeof(line), stdin))
-				break;
-			auto e = strlen(line) - 1;
-			while (line[e] == 10 || line[e] == 13)
-				line[e--] = 0;
-			PackFormat packFormat =
-				(packLevel == 0 || packMode == INFOZIP ? (PackFormat)packLevel
-				 : INTEL_COMPRESSED);
-			fs.addDir(line, packFormat);
-			noFiles = false;
-
-		}
-	}
+    if (!isatty(fileno(stdin)))
+    {
+        char line[1024];
+        while (true)
+        {
+            if (!fgets(line, sizeof(line), stdin))
+                break;
+            auto e = strlen(line) - 1;
+            while (line[e] == 10 || line[e] == 13)
+                line[e--] = 0;
+            PackFormat packFormat =
+                (packLevel == 0 || packMode == INFOZIP ? (PackFormat)packLevel : INTEL_COMPRESSED);
+            fs.addDir(line, packFormat);
+            noFiles = false;
+        }
+    }
 
     // If only a directory is given, pack that to a zip
     struct stat ss;
     if (noFiles && stat(fs.zipfile.c_str(), &ss) == 0)
     {
+		std::string ext;
+		auto dot = fs.zipfile.find_last_of(".");
+		if (dot != string::npos)
+			ext = fs.zipfile.substr(dot+1);
         if (ss.st_mode & S_IFDIR)
         {
             fs.junkPaths = true;
@@ -322,9 +330,13 @@ int main(int argc, char **argv)
             auto last = fs.zipfile.find_last_of("\\/");
             if (last != string::npos)
                 fs.zipfile = fs.zipfile.substr(last + 1);
-
             fs.zipfile = fs.zipfile + ".zip";
         }
+		else if(ext == "zip" || ext == "ZIP")
+		{
+			extractMode = true;
+		}
+
     }
 
     if (fs.zipfile == "")
@@ -333,23 +345,24 @@ int main(int argc, char **argv)
         return 0;
     }
 
-	if(extractMode)
-	{
-		FUnzip fuz;
-		fuz.zipName = fs.zipfile;
-		fuz.threadCount = fs.threadCount;
-		fuz.verbose = fs.verbose;
-		fuz.destinationDir = destDir;
-		try
-		{
-			fuz.exec();
-		}
-		catch(funzip_exception &e)
-		{
-			error(e.what());
-		}
-		return 0;
-	}
+    if (extractMode)
+    {
+        FUnzip fuz;
+        fuz.zipName = fs.zipfile;
+        fuz.threadCount = fs.threadCount;
+        fuz.verbose = fs.verbose;
+        fuz.listFiles = listFiles;
+        fuz.destinationDir = destDir;
+        try
+        {
+            fuz.exec();
+        }
+        catch (funzip_exception &e)
+        {
+            error(e.what());
+        }
+        return 0;
+    }
 
     try
     {

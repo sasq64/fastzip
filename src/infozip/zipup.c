@@ -220,6 +220,7 @@ local ftype ifile;              /* file to compress */
 
 
 /* moved check to function 3/14/05 EG */
+/*
 int is_seekable(y)
   FILE *y;
 {
@@ -238,7 +239,7 @@ int is_seekable(y)
 
   return 1;
 }
-
+*/
 
 int percent(n, m)
   uzoff_t n;

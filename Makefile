@@ -106,6 +106,7 @@ endif
 
 TESTFILES := $(OBJFILES) $(OBJDIR)/testmain.o $(OBJDIR)/test.o
 OBJFILES += $(OBJDIR)/main.o
+ALLFILES := $(TESTFILES) $(OBJDIR)/main.o
 
 VERSION=_`date "+%y%m%d"`
 
@@ -145,7 +146,7 @@ $(OBJDIR)/%.o: $(SRCDIR)/%.asm
 else
 
 clean:
-	rm -f $(OBJFILES) ${TARGET}
+	rm -f $(ALLFILES) ${TARGET} test
 
 $(OBJDIR)/%.o: $(SRCDIR)/%.c
 	@mkdir -p $(@D)

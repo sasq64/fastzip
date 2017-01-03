@@ -23,6 +23,7 @@ public:
 //private:
 	std::string zipName;
 	int threadCount = 8;
+	bool listFiles = false;
 	bool verbose = false;
 	std::string destinationDir;
 };

@@ -286,6 +286,10 @@ int bi_valid;
 #else
 int bi_valid;
 #endif
+
+/* Used bits in last byte of deflate block */
+int last_bits;
+
 /* Number of valid bits in bi_buf.  All bits above the last valid bit
  * are always zero.
  */

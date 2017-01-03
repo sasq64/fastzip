@@ -115,7 +115,7 @@ void zipUnzip(const std::string &dirName, const std::string &zipName, const std:
 TEST_CASE("basic", "")
 {
 	removeFiles("temp/out");
-	removeFiles("temp/test.zip");
+	//removeFiles("temp/test.zip");
 	if(!fileExists("temp/zipme"))
 		createFiles("temp/zipme/f", 10, 128*1024);
 
@@ -123,7 +123,6 @@ TEST_CASE("basic", "")
 		zipUnzip("temp/zipme", "temp/test.zip", "temp/out");
 		REQUIRE(compareDir("temp/zipme", "temp/out/zipme") == true);
 	}
-
 	SECTION("Create zip with zip64 extension") {
 		zipUnzip("temp/zipme", "temp/test.zip", "temp/out", FORCE64);
 		REQUIRE(compareDir("temp/zipme", "temp/out/zipme") == true);

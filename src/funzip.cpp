@@ -21,6 +21,7 @@
 #include <mutex>
 
 #endif
+
 #include <atomic>
 #include <unistd.h>
 #include <cstring>
@@ -64,13 +65,13 @@ static int64_t uncompress(FILE *fout, int64_t inSize, FILE *fin)
 		fread(data, 1, inSize, fin);
 		stream.next_in = data;
 		stream.avail_in = inSize;
-	} else
+	} else {
 		data = new uint8_t [bufSize];
-
+	}
 	int rc = MZ_OK;
 	while (rc == MZ_OK)
 	{
-		if(stream.avail_in == 0)
+		if(inSize == 0 && stream.avail_in == 0)
 		{
 			stream.next_in = data;
 			stream.avail_in = fread(data, 1, bufSize, fin);
@@ -81,6 +82,7 @@ static int64_t uncompress(FILE *fout, int64_t inSize, FILE *fin)
 		stream.avail_out = bufSize;
 
 		rc = mz_inflate(&stream, MZ_SYNC_FLUSH);
+		// Did we unpack anything?
 		if(stream.avail_out == bufSize)
 			return -1;
 		fwrite(buf, 1, bufSize - stream.avail_out, fout);
@@ -178,6 +180,16 @@ void FUnzip::exec()
 
 	if(zs.size() == 0)
 		return;
+
+	if(listFiles)
+	{
+		for(int i=0; i<zs.size(); i++)
+		{
+			auto &e = zs.getEntry(i);
+			printf("%s\n", e.name.c_str());
+		}
+		return;
+	}
 
 	if(destinationDir == "")
 		smartDestDir(zs);

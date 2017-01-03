@@ -15,6 +15,7 @@ void flush_outbuf(char *o_buf, unsigned *o_idx)
 }
 
 // Random access to output data?
+
 int seekable()
 {
     return 1;
@@ -26,15 +27,11 @@ struct BufData
     unsigned in_size;
     unsigned in_offset;
     IZDeflate *zid;
-    int earlyOut;
-    bool nopack;
     bool fail;
 };
 
-local unsigned mem_read(void *handle, char *b, unsigned bsize)
+local unsigned mem_read(void *handle, char *target, unsigned size)
 {
-    // printf("Getting %d bytes\n", bsize);
-
     BufData *bufdata = (BufData*)handle;
 
     char *wp = bufdata->zid->out_buf + bufdata->zid->out_offset;
@@ -47,38 +44,52 @@ local unsigned mem_read(void *handle, char *b, unsigned bsize)
         return 0;
     }
 
-    if (bufdata->earlyOut && (wp < rp) && (wp + 65536 >= bufdata->in_buf))
-    {
-        int ratio = (uint64_t)(bufdata->zid->out_offset + 1) * 100 / (bufdata->in_offset + 1);
-        // printf("RATIO %d%% at overwrite position\n", ratio);
-        if (ratio >= bufdata->earlyOut)
-        {
-            bufdata->nopack = true;
-            return 0;
-        }
-        bufdata->earlyOut = 0;
-    }
+    if (bufdata->in_offset >= bufdata->in_size)
+        return 0;
+    ulg left = bufdata->in_size - bufdata->in_offset;
+    if (left < (ulg)size)
+        size = left;
+    memcpy(target, rp, size);
+    bufdata->in_offset += size;
 
-    // printf("WRITE: %p START %p READ: %p -- DELTA %d\n", wp, bufdata->in_buf, rp, (int)(rp - wp));
-
-    if (bufdata->in_offset < bufdata->in_size)
-    {
-        ulg block_size = bufdata->in_size - bufdata->in_offset;
-        if (block_size > (ulg)bsize)
-            block_size = (ulg)bsize;
-        memcpy(b, bufdata->in_buf + bufdata->in_offset, (unsigned)block_size);
-        bufdata->in_offset += (unsigned)block_size;
-        return (unsigned)block_size;
-    }
-    else
-    {
-        return 0; /* end of input */
-    }
+    return size;
 }
+
+/*
+
+--- > bytes
+
+|76543210|FEDCBA98|NMLKJIHG|VUTSRQPO|
+
+load 16bit at a time from back
+
+
+|VUTSRQPO|NMLKJIHG|
+RS
+|..VUTSRQ|PONMLKJI| x |HG|
+
+|FEDCBA98|76543210|
+
+
+
+
+Shift each byte right
+
+Next buffer: Shift everything 3 bits to the left
+
+*/
+
+
+/*
+
+   If prevous buffer had 3 bits left ufilled;
+    Shift this buffer 3 bits left
+    OR the return value into the last word of the previous buffer (possibly anding by 0xffffffffffffffff >> 3) first)
+*/
 
 // INTERFACE
 
-int64_t iz_deflate(int level, char *tgt, char *src, ulg tgtsize, ulg srcsize, int earlyOut)
+int64_t iz_deflate(int level, char *tgt, char *src, ulg tgtsize, ulg srcsize) 
 {
     ush att = (ush)UNKNOWN;
     ush flags = 0;
@@ -92,8 +103,7 @@ int64_t iz_deflate(int level, char *tgt, char *src, ulg tgtsize, ulg srcsize, in
     buf.in_size = (unsigned)srcsize;
     buf.in_offset = 0;
     buf.zid = &zid;
-    buf.nopack = buf.fail = false;
-    buf.earlyOut = earlyOut;
+    buf.fail = false;
 
     zid.read_buf = mem_read;
     zid.read_handle = &buf;
@@ -101,28 +111,17 @@ int64_t iz_deflate(int level, char *tgt, char *src, ulg tgtsize, ulg srcsize, in
     zid.level = level;
     memset(zid.window, 0, sizeof(zid.window));
 
-    char save = src[0];
-
     zid.bi_init(tgt, (unsigned)(tgtsize), FALSE);
     zid.ct_init(&att, &method);
     zid.lm_init((zid.level != 0 ? zid.level : 1), &flags);
-    out_total += (unsigned)zid.deflate();
+    out_total = (unsigned)zid.deflate();
 
     if (buf.fail)
         return -1;
 
-    char *wp = tgt + out_total;
-    char *rp = src + srcsize;
+    if(method == STORE)
+        return -2;
 
-    int ratio = (uint64_t)(zid.out_offset + 1) * 100 / (buf.in_offset + 1);
-    if (buf.nopack || (buf.earlyOut && (ratio >= earlyOut) && (wp < src)))
-    {
-        // printf("RATIO %d%% at end\n", ratio);
-        assert(save == src[0]);
-        return -2; // Early out pack cancel
-    }
-
-    zid.window_size = 0L; /* was updated by lm_init() */
-
-    return out_total;
+    //printf("Last bits: %d\n", zid.last_bits);
+    return ((out_total - 1) << 3) + zid.last_bits;
 }
