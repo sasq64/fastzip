@@ -60,6 +60,8 @@ Fastzip v1.1 by Jonas Minnberg
 (c) 2015 Unity Technologies
 
 Usage: fastzip [options] <zipfile> <paths...>
+       fastzip <file>.zip (Unpack)
+       fastzip <file or dir> (Pack as <file>.zip)
 
 -l                                     List files in archive.  
 -j | --junk-paths                      Strip initial part of path names.
@@ -321,8 +323,12 @@ int main(int argc, char **argv)
 		auto dot = fs.zipfile.find_last_of(".");
 		if (dot != string::npos)
 			ext = fs.zipfile.substr(dot+1);
-        if (ss.st_mode & S_IFDIR)
-        {
+		if(ext == "zip" || ext == "ZIP")
+		{
+			extractMode = true;
+		}
+		else
+		{
             fs.junkPaths = true;
             PackFormat packFormat =
                 (packLevel == 0 || packMode == INFOZIP ? (PackFormat)packLevel : INTEL_COMPRESSED);
@@ -331,10 +337,6 @@ int main(int argc, char **argv)
             if (last != string::npos)
                 fs.zipfile = fs.zipfile.substr(last + 1);
             fs.zipfile = fs.zipfile + ".zip";
-        }
-		else if(ext == "zip" || ext == "ZIP")
-		{
-			extractMode = true;
 		}
 
     }
