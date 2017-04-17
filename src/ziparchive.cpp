@@ -157,27 +157,6 @@ void ZipArchive::close()
 		write<uint64_t>(endCD);
 		write<uint32_t>(1);
 	}
-/*
-	if (end64)
-	{
-		write<uint32_t>(0x06064b50);
-		write<uint64_t>(44);
-		write<uint16_t>(0x031e); // 03 = Unix, 0x1E = version 3.0
-		write<uint16_t>(45);     // 4.5 = min version for zip64
-		write<uint32_t>(0);
-		write<uint32_t>(0);
-		write<uint64_t>(entryCount);
-		write<uint64_t>(entryCount);
-		write<uint64_t>(sizeCD);
-		write<uint64_t>(startCD);
-
-		// Locator
-		write<uint32_t>(0x07064b50);
-		write<uint32_t>(0);
-		write<uint64_t>(endCD);
-		write<uint32_t>(1);
-	}
-*/
 	write<uint32_t>(0x06054b50);
 	write<uint16_t>(0);
 	write<uint16_t>(0);

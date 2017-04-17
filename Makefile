@@ -111,10 +111,10 @@ ALLFILES := $(TESTFILES) $(OBJDIR)/main.o
 VERSION=_`date "+%y%m%d"`
 
 all : $(TARGET) test
-
 dist :
 	$(MAKE) -C .
-	WITH_INTEL=0 HOST=windows PREFIX=x86_64-apple-darwin13.4.0- SUFFIX=-5 $(MAKE) -C .
+	#WITH_INTEL=0 HOST=windows PREFIX=x86_64-apple-darwin13.4.0- SUFFIX=-5 $(MAKE) -C .
+	WITH_INTEL=0 HOST=windows PREFIX=x86_64-apple-darwin15.6.0- SUFFIX=-6 $(MAKE) -C .
 	strip fastzip
 	x86_64-w64-mingw32-strip fastzip.exe
 	./fastzip fastzip$(VERSION).zip fastzip.exe=win/fastzip.exe fastzip=mac/fastzip

@@ -85,7 +85,9 @@ ZipStream::ZipStream(const std::string &zipName) : zipName(zipName)
 			if(extra.id == 0x01)
 			{
 				offset = extra.zip64.offset;
-			}
+			} else 
+				printf("Ignoring extra block %04x", extra.id);
+
 			exLen -= (extra.size+4);
 		}
 

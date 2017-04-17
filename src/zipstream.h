@@ -36,7 +36,6 @@ public:
 
 	FILE *copyFP() const {
 		return fopen(zipName.c_str(), "rb");
-		//return fdopen(dup(fileno(fp)), "r");
 	}
 
 private:
