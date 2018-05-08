@@ -41,7 +41,7 @@ endif
 ifeq ($(HOST),windows)
   CFLAGS += -mno-ms-bitfields -I$(SRCDIR)/mingw-std-threads
   ASMFLAGS += -DWIN_CC=1
-  LIBS += -lgdi32 
+  LIBS += -lgdi32
   LDFLAGS += -Lprebuilt/win -static
   TARGET := $(TARGET).exe
   OBJDIR = winobj
@@ -108,7 +108,7 @@ TESTFILES := $(OBJFILES) $(OBJDIR)/testmain.o $(OBJDIR)/test.o
 OBJFILES += $(OBJDIR)/main.o
 ALLFILES := $(TESTFILES) $(OBJDIR)/main.o
 
-VERSION=_`date "+%y%m%d"`
+VERSION=_$(shell date "+%y%m%d")
 
 all : $(TARGET) test
 dist :

@@ -2,55 +2,17 @@
 #include "funzip.h"
 #include "utils.h"
 
-#ifdef _WIN32
-#include <windows.h>
-#endif
+#include "CLI11.hpp"
 
 #include <cstdio>
 #include <cstdlib>
+#include <cctype>
 #include <unistd.h>
+
+#include <string>
 #include <vector>
-
-using std::string;
-using std::vector;
-
-#ifdef DO_BENCHMARK
-#include <benchmark/benchmark.h>
-
-int64_t iz_deflate(int level, char* tgt, char* src, unsigned long tgtsize,
-                   unsigned long srcsize, int earlyOut);
-// Define another benchmark
-static void BM_Inflate(benchmark::State& state)
-{
-	vector<char> testdata(256 * 1024, 0);
-	vector<char> output(512 * 1024);
-
-	if (fileExists(".benchdata")) {
-		printf("Reading\n");
-		FILE* fp = fopen(".benchdata", "rb");
-		fread(&testdata[0], 1, testdata.size(), fp);
-		fclose(fp);
-	} else {
-		for (auto& c : testdata) {
-			c = rand() % 256;
-			if (c < 128)
-				c = 0;
-		}
-		FILE* fp = fopen(".benchdata", "wb");
-		fwrite(&testdata[0], 1, testdata.size(), fp);
-		fclose(fp);
-	}
-	while (state.KeepRunning()) {
-		iz_deflate(4, &output[0], &testdata[0], output.size(), testdata.size(), 0); }
-}
-
-BENCHMARK(BM_Inflate);
-
-BENCHMARK_MAIN();
-
-#else
-
-const string helpText =
+#include <thread>
+const std::string helpText =
     R"(
 Fastzip v1.1 by Jonas Minnberg
 (c) 2015 Unity Technologies
@@ -102,19 +64,19 @@ $   fastzip myapp.apk --sign=release.keystore,secret -Xmp4,mp3,png -j -2
     -Z packed.zip libs=lib res/* bin/classes.dex assets -0 movies
 )";
 
-static const vector<string> androidNopackExt = {
+static const std::vector<std::string> androidNopackExt = {
     "jpg",  "jpeg", "png",  "gif", "wav",   "mp2",   "mp3", "ogg", "aac", "mpg",
     "mpeg", "mid",  "midi", "smf", "jet",   "rtttl", "imy", "xmf", "mp4", "m4a",
     "m4v",  "3gp",  "3gpp", "3g2", "3gpp2", "amr",   "awb", "wma", "wmv"};
 
-static void error(const string& msg)
+static void error(const std::string& msg)
 {
 	printf("\n**Error: %s\n", msg.c_str());
 	fflush(stdout);
 	exit(1);
 }
 
-static void warning(const string& msg)
+static void warning(const std::string& msg)
 {
 	printf("\n**Warning: %s\n", msg.c_str());
 	fflush(stdout);
@@ -132,31 +94,71 @@ int main(int argc, char** argv)
 	int packLevel = 5;
 	int packMode = INFOZIP;
 	bool noFiles = true;
-	string destDir;
+	std::string destDir;
 	bool extractMode = false;
 	bool listFiles = false;
 
+	fs.threadCount = std::thread::hardware_concurrency();
+
 #ifdef _WIN32
-	SYSTEM_INFO sysinfo;
-	GetSystemInfo(&sysinfo);
-	fs.threadCount = sysinfo.dwNumberOfProcessors;
-	string HOME = getenv("USERPROFILE");
+	std::string HOME = getenv("USERPROFILE");
 #else
-	fs.threadCount = sysconf(_SC_NPROCESSORS_ONLN);
-	string HOME = getenv("HOME");
+	std::string HOME = getenv("HOME");
 #endif
 
-	int i = 1;
-	if (strcmp(argv[1], "x") == 0 && !fileExists("x")) {
-		extractMode = true;
-		i++;
-	}
+    static CLI::App opts{"fastzip"};
 
+	int i = 1;
+	/* if (strcmp(argv[1], "x") == 0 && !fileExists("x")) { */
+	/* 	extractMode = true; */
+	/* 	i++; */
+	/* } */
+
+	std::vector<std::string> signArgs;
+	std::vector<std::string> dirNames;
+
+	opts.add_flag_function("-l", [&](size_t) { listFiles = extractMode = true; }, "List files in archive");
+	opts.add_flag("-j,--junk-paths", fs.junkPaths, "Strip initial part of path names.");
+	opts.add_option("-t,--threads", fs.threadCount, "Worker thread count. Defaults to number of CPU cores.");
+	opts.add_flag("-v,--verbose", fs.verbose, "Print filenames.");
+	opts.add_option("-d,--destination", destDir, "Destination directory for extraction. Defaults to 'smart' root directory. Use '-d .' for standard (unzip) behavour. ");
+	opts.add_flag("-X", extractMode, "Extract mode. Options below are ignored.");
+	//opts.add_option("x", extractMode)->check(CLI::NonexistentPath);
+	opts.add_option("-S,--sign", signArgs, "Jarsign the zip using the keystore file.");
+	opts.add_option("zipfile", fs.zipfile, "Zip file to create or extract");
+	opts.add_option("directories", dirNames, "File or directory to compress")->check([&](const std::string &n) -> std::string {
+		if(n[0] == '-') {
+			if(n.length() == 2 && std::isdigit(n[1])) {
+				packLevel = (int)n[1] - 0x30;
+				if (packLevel > 0)
+					packMode = INFOZIP;
+			}
+			return "";
+		}
+		PackFormat packFormat =
+			(packLevel == 0 || packMode == INFOZIP ? (PackFormat)packLevel
+												   : INTEL_COMPRESSED);
+		fs.addDir(n, packFormat);
+		printf("%s\n", n.c_str());
+		noFiles = false;
+		return "";
+	});
+
+	/* opts.add_option("directories", [&](const std::vector<std::string>> n) -> bool { */
+	/* 	PackFormat packFormat = */
+	/* 		(packLevel == 0 || packMode == INFOZIP ? (PackFormat)packLevel */
+	/* 											   : INTEL_COMPRESSED); */
+	/* 	fs.addDir(argv[i], packFormat); */
+	/* 	noFiles = false; */
+	/* }, "File or directory to compress"); */
+
+    CLI11_PARSE(opts, argc, argv);
+#ifdef XXX
 	for (; i < argc; i++) {
 		if (argv[i][0] == '-') {
-			string name;
-			vector<string> parts;
-			vector<string> args;
+			std::string name;
+			std::vector<std::string> parts;
+			std::vector<std::string> args;
 			char opt = 0;
 
 			// Parse option
@@ -199,14 +201,14 @@ int main(int argc, char** argv)
 			} else if (name == "junk-paths" || opt == 'j') {
 				fs.junkPaths = true;
 			} else if (name == "add-zip" || opt == 'Z') {
-				string zipName = argv[++i];
+				std::string zipName = argv[++i];
 				if (fileExists(zipName)) {
 					PackFormat packFormat =
 					    (packLevel == 0 || packMode == INFOZIP ? (PackFormat)packLevel
 					                                           : INTEL_COMPRESSED);
 					fs.addZip(zipName, packFormat);
 				} else
-					warning(string("File not found: ") + zipName);
+					warning(std::string("File not found: ") + zipName);
 			} else if (name == "store-ext" || opt == 'X') {
 				fs.storeExts = args;
 			} else if (name == "align" || opt == 'A') {
@@ -250,6 +252,7 @@ int main(int argc, char** argv)
 			}
 		}
 	}
+#endif
 
 	if (!isatty(fileno(stdin))) {
 		char line[1024];
@@ -272,7 +275,7 @@ int main(int argc, char** argv)
 	if (noFiles && stat(fs.zipfile.c_str(), &ss) == 0) {
 		std::string ext;
 		auto dot = fs.zipfile.find_last_of(".");
-		if (dot != string::npos)
+		if (dot != std::string::npos)
 			ext = fs.zipfile.substr(dot + 1);
 		if (ext == "zip" || ext == "ZIP") {
 			extractMode = true;
@@ -283,7 +286,7 @@ int main(int argc, char** argv)
 			                                           : INTEL_COMPRESSED);
 			fs.addDir(fs.zipfile, packFormat);
 			auto last = fs.zipfile.find_last_of("\\/");
-			if (last != string::npos)
+			if (last != std::string::npos)
 				fs.zipfile = fs.zipfile.substr(last + 1);
 			fs.zipfile = fs.zipfile + ".zip";
 		}
@@ -317,5 +320,3 @@ int main(int argc, char** argv)
 
 	return 0;
 }
-
-#endif // BENCMARK
