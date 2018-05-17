@@ -1,12 +1,15 @@
 #include "utils.h"
 
-void makedir(const std::string &name) {
+#include <filesystem>
 
 #ifdef _WIN32
-	mkdir(name.c_str());
-#else
-	mkdir(name.c_str(), 07777);
+#include <direct.h>
 #endif
+
+namespace fs = std::experimental::filesystem;
+
+void makedir(const std::string &name) {
+	fs::create_directory(name);
 }
 
 void makedirs(const std::string &path) {
@@ -65,44 +68,15 @@ bool fileExists(const std::string &name)
 
 void listFiles(char *dirName, std::function<void(const std::string &path)> &f)
 {
-    DIR *dir;
-    struct dirent *ent;
-
-    struct stat ss;
-    stat(dirName, &ss);
-    if ((ss.st_mode & S_IFDIR) == 0)
-    {
-        f(dirName);
-        return;
-    }
-
-    if ((dir = opendir(dirName)) != nullptr)
-    {
-        char *dirEnd = dirName + strlen(dirName);
-        *dirEnd++ = PATH_SEPARATOR;
-        *dirEnd = 0;
-        int dirLen = strlen(dirName);
-        while ((ent = readdir(dir)) != nullptr)
-        {
-            char *p = ent->d_name;
-            if (p[0] == '.' && (p[1] == 0 || (p[1] == '.' && p[2] == 0)))
-                continue;
-
-            strcpy(dirEnd, p);
-#ifdef _WIN32
-            stat(dirName, &ss);
-            if ((ss.st_mode & S_IFDIR) != 0)
-#else
-            if (ent->d_type == DT_DIR)
-#endif
-                listFiles(dirName, f);
-            else
-            {
-                f(dirName);
-            }
-        }
-        closedir(dir);
-    }
+	for (auto& p : fs::directory_iterator(dirName)) {
+		auto path = p.path().string();
+		if (path[0] == '.' && (path[1] == 0 || (path[1] == '.' && path[2] == 0)))
+			continue;
+		if (fs::is_directory(p.status()))
+			listFiles(path, f);
+		else
+			f(std::string(dirName) + "/" + path);
+	}
 }
 
 void listFiles(const std::string &dirName, std::function<void(const std::string &path)> f)
@@ -127,44 +101,7 @@ uint32_t msdosToUnixTime(uint32_t m)
 
 void removeFiles(char *dirName)
 {
-    DIR *dir;
-    struct dirent *ent;
-
-    struct stat ss;
-    stat(dirName, &ss);
-    if ((ss.st_mode & S_IFDIR) == 0)
-    {
-		remove(dirName);
-        return;
-    }
-
-	std::vector<std::string> toRemove;
-    if ((dir = opendir(dirName)) != nullptr)
-    {
-        char *dirEnd = dirName + strlen(dirName);
-        *dirEnd++ = PATH_SEPARATOR;
-        *dirEnd = 0;
-        int dirLen = strlen(dirName);
-        while ((ent = readdir(dir)) != nullptr)
-        {
-            char *p = ent->d_name;
-            if (p[0] == '.' && (p[1] == 0 || (p[1] == '.' && p[2] == 0)))
-                continue;
-
-            strcpy(dirEnd, p);
-#ifdef _WIN32
-            stat(dirName, &ss);
-            if ((ss.st_mode & S_IFDIR) != 0)
-#else
-            if (ent->d_type == DT_DIR)
-#endif
-			 	removeFiles(dirName);
-			toRemove.push_back(dirName);
-        }
-        closedir(dir);
-		for(const auto &t : toRemove)
-			remove(t.c_str());
-    }
+	fs::remove_all(dirName);
 }
 
 void removeFiles(const std::string &dirName)

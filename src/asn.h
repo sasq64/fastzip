@@ -53,7 +53,7 @@ namespace asn1
         {
             if (len == -1)
                 len = read<uint16_t>();
-            char s[len + 1];
+            char s[1024]; // TODO: Very bad!
             read(s, len);
             s[len] = 0;
             return std::string(s);

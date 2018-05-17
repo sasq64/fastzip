@@ -47,7 +47,14 @@ enum {
 	EndOfCD_SIG = 0x06054b50,
 };
 
-struct __attribute__((packed)) LocalEntry
+#ifdef _WIN32
+#define PACK
+#pragma pack(1)
+#else
+#define PACK __attribute__((packed))
+#endif
+
+struct PACK LocalEntry
 {
     uint32_t sig;
     uint16_t v1;
@@ -61,7 +68,7 @@ struct __attribute__((packed)) LocalEntry
     uint16_t exLen;
 };
 
-struct __attribute__((packed)) CentralDirEntry
+struct PACK CentralDirEntry
 {
     uint32_t sig;
     uint16_t v0;
@@ -81,7 +88,7 @@ struct __attribute__((packed)) CentralDirEntry
     uint32_t offset;
 };
 
-struct __attribute__((packed)) Extra64
+struct PACK Extra64
 {
     uint16_t id;
     uint16_t size;
@@ -91,7 +98,7 @@ struct __attribute__((packed)) Extra64
     uint32_t disk;
 };
 
-struct __attribute__((packed)) EndOfCentralDir
+struct PACK EndOfCentralDir
 {
 	uint32_t id;
 	uint16_t disk;
@@ -103,7 +110,7 @@ struct __attribute__((packed)) EndOfCentralDir
 	uint16_t commlen;
 };
 
-struct __attribute__((packed)) EndOfCentralDir64
+struct PACK EndOfCentralDir64
 {
 	uint32_t id;
 	uint64_t size;
@@ -117,7 +124,7 @@ struct __attribute__((packed)) EndOfCentralDir64
 	int64_t cdoffset;
 };
 
-struct __attribute__((packed)) UnixExtra
+struct PACK UnixExtra
 {
 	uint32_t Atime;
 	uint32_t Mtime;
@@ -126,7 +133,7 @@ struct __attribute__((packed)) UnixExtra
 	uint8_t var[0];
 };
 
-struct __attribute__((packed)) Unix2Extra
+struct PACK Unix2Extra
 {
 	uint8_t ver;
 	uint8_t ulen;
@@ -135,7 +142,7 @@ struct __attribute__((packed)) Unix2Extra
 	int32_t GID;
 };
 
-struct __attribute__((packed)) Zip64Extra
+struct PACK Zip64Extra
 {
     int64_t uncompSize;
     int64_t compSize;
@@ -143,15 +150,19 @@ struct __attribute__((packed)) Zip64Extra
     uint32_t disk;
 };
 
-struct __attribute__((packed)) Extra
+struct PACK Extra
 {
 	uint16_t id;
 	uint16_t size;
-	union __attribute__((packed)) {
+	union PACK {
 		UnixExtra unix;
 		Unix2Extra unix2;
 		Zip64Extra zip64;
 		uint8_t data[0xffff];
 	};
 };
+
+#ifdef _WIN32
+#pragma pack()
+#endif
 

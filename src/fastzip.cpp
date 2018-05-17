@@ -1,5 +1,9 @@
 #include "fastzip.h"
+
+#ifdef WITH_INTEL
 #include "igzip/c_code/igzip_lib.h"
+#endif
+
 #include "inflate.h"
 #include "sign.h"
 #include "utils.h"
@@ -7,28 +11,9 @@
 #include "zipformat.h"
 #include "zipstream.h"
 
-#ifdef _WIN32
-
-#include "mingw.condition_variable.h"
-#include "mingw.mutex.h"
-#include "mingw.thread.h"
-#include <chrono>
-#include <condition_variable>
-#include <mutex>
-#include <stdio.h>
-#include <system_error>
-#include <thread>
-#include <windows.h>
-
-#else
-
 #include <condition_variable>
 #include <mutex>
 #include <thread>
-
-#endif
-
-#include <unistd.h>
 
 #include <assert.h>
 

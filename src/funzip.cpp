@@ -4,28 +4,12 @@
 #include "inflate.h"
 #include "utils.h"
 
-#ifdef _WIN32
-
-#include <windows.h>
-#include <stdio.h>
-#include <chrono>
-#include <system_error>
-#include <mutex>
-#include "mingw.mutex.h"
-#include <thread>
-#include "mingw.thread.h"
-
-#else
-
 #include <thread>
 #include <mutex>
 
-#endif
 
 #include <atomic>
-#include <unistd.h>
 #include <cstring>
-#include <sys/time.h>
 #include <assert.h>
 #include <fcntl.h>
 #include <string>
@@ -123,9 +107,14 @@ void FUnzip::smartDestDir(ZipStream &zs)
 
 static inline void setMeta(const std::string &name, uint16_t flags, uint32_t datetime, int uid, int gid, bool link = false)
 {
+#if 0
 	auto timestamp = msdosToUnixTime(datetime);
 	struct timeval t[2] = {{0,0}};
 	t[0].tv_sec = t[1].tv_sec = timestamp;
+	
+	fs::file_time ft;
+	fs::last_write_time(name, );
+
 	if(link)
 	{
 		if(flags)
@@ -140,6 +129,7 @@ static inline void setMeta(const std::string &name, uint16_t flags, uint32_t dat
 		chown(name.c_str(), uid, gid);
 		utimes(name.c_str(), t);
 	}
+#endif
 }
 static void readExtra(FILE *fp, int exLen, int* uid, int* gid, int64_t *compSize = nullptr, int64_t *uncompSize = nullptr)
 {

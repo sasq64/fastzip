@@ -1,4 +1,4 @@
-#include "deflate.h"
+#include "infozip/deflate.h"
 #include <cstdio>
 #include <cassert>
 #include <cstdint>
