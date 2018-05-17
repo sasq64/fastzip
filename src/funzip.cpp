@@ -16,7 +16,10 @@
 #include <cstdio>
 #include <vector>
 
+#include <experimental/filesystem>
+
 using namespace std;
+namespace fs = std::experimental::filesystem;
 
 static int64_t copyfile(FILE *fout, int64_t size, FILE *fin)
 {
@@ -280,11 +283,12 @@ void FUnzip::exec()
 		auto name = destinationDir + e.name;
 		auto dname = path_directory(name);
 		auto fname = path_filename(e.name);
-		int fd = open(dname.c_str(), 0);
+		//int fd = open(dname.c_str(), 0);
 		if(verbose)
 			printf("Link %s/%s -> %s\n", dname.c_str(), fname.c_str(), linkName);
-		symlinkat(linkName, fd, fname.c_str());
-		close(fd);
+        fs::create_symlink(linkName, fname);
+		//symlinkat(linkName, fd, fname.c_str());
+		//close(fd);
 		setMeta(name, e.flags, le.dateTime, uid, gid, true);
 	}
 	for(int i : dirs)

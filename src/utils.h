@@ -5,8 +5,6 @@
 #include <vector>
 #include <functional>
 #include <sys/stat.h>
-//#include <unistd.h>
-//#include <dirent.h>
 #include <cstring>
 #include <deque>
 #include <algorithm>
@@ -63,48 +61,15 @@ std::vector<std::basic_string<C> > split(const C *s, const std::string &delim = 
 
 bool fileExists(const std::string &name);
 
+void listFiles(char *dirName, std::function<void(const std::string &path)> &f);
+void listFiles(const std::string &dirName, std::function<void(const std::string &path)> f);
+void removeFiles(const std::string &dirName);
+
 template<class CONTAINER> void listFiles(char *dirName, CONTAINER &rc, int &strSize)
 {
-    DIR *dir;
-    struct dirent *ent;
-
-    struct stat ss;
-    stat(dirName, &ss);
-    if ((ss.st_mode & S_IFDIR) == 0)
-    {
-        rc.emplace_back(dirName);
-        strSize += strlen(dirName);
-        return;
-    }
-
-    if ((dir = opendir(dirName)) != nullptr)
-    {
-        char *dirEnd = dirName + strlen(dirName);
-        *dirEnd++ = PATH_SEPARATOR;
-        *dirEnd = 0;
-        int dirLen = strlen(dirName);
-        while ((ent = readdir(dir)) != nullptr)
-        {
-            char *p = ent->d_name;
-            if (p[0] == '.' && (p[1] == 0 || (p[1] == '.' && p[2] == 0)))
-                continue;
-
-            strcpy(dirEnd, p);
-#ifdef _WIN32
-            stat(dirName, &ss);
-            if ((ss.st_mode & S_IFDIR) != 0)
-#else
-            if (ent->d_type == DT_DIR)
-#endif
-                listFiles(dirName, rc, strSize);
-            else
-            {
-                rc.emplace_back(dirName);
-                strSize += (dirLen + strlen(p));
-            }
-        }
-        closedir(dir);
-    }
+    listFiles(dirName, [&rc](const std::string& path) {
+        rc.push_back(path);
+    });
 }
 
 template<class CONTAINER> int listFiles(const std::string &dirName, CONTAINER &rc)
@@ -116,9 +81,6 @@ template<class CONTAINER> int listFiles(const std::string &dirName, CONTAINER &r
     return strSize;
 }
 
-void listFiles(char *dirName, std::function<void(const std::string &path)> &f);
-void listFiles(const std::string &dirName, std::function<void(const std::string &path)> f);
-void removeFiles(const std::string &dirName);
 
 template<typename T> class UniQueue : public std::deque<std::reference_wrapper<const T> >
 {
