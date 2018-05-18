@@ -1,6 +1,7 @@
 #include "utils.h"
 
 #include <experimental/filesystem>
+#include <ctime>
 
 #ifdef _WIN32
 #include <direct.h>
@@ -66,27 +67,27 @@ bool fileExists(const std::string &name)
     return stat(name.c_str(), &ss) == 0;
 }
 
-void listFiles(char *dirName, std::function<void(const std::string &path)> &f)
+void listFiles(char *dirName, const std::function<void(const std::string &path)>& f)
 {
-	for (auto& p : fs::directory_iterator(dirName)) {
+	for (const auto& p : fs::directory_iterator(dirName)) {
 		auto path = p.path().string();
 		if (path[0] == '.' && (path[1] == 0 || (path[1] == '.' && path[2] == 0)))
 			continue;
 		if (fs::is_directory(p.status()))
 			listFiles(path, f);
 		else
-			f(std::string(dirName) + "/" + path);
+			f(path);
 	}
 }
 
-void listFiles(const std::string &dirName, std::function<void(const std::string &path)> f)
+void listFiles(const std::string &dirName, const std::function<void(const std::string &path)>& f)
 {
     char path[16384];
     strcpy(path, dirName.c_str());
     listFiles(path, f);
 }
 
-uint32_t msdosToUnixTime(uint32_t m)
+time_t msdosToUnixTime(uint32_t m)
 {
     struct tm t;
     t.tm_year = (m >> 25) + 80;
@@ -97,6 +98,11 @@ uint32_t msdosToUnixTime(uint32_t m)
     t.tm_sec = m & 0x1f;
     t.tm_isdst = -1;
     return mktime(&t);
+}
+
+fs::file_time_type msdosToFileTime(uint32_t m)
+{
+	return fs::file_time_type::clock::from_time_t(msdosToUnixTime(m));
 }
 
 void removeFiles(char *dirName)

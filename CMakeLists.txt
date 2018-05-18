@@ -24,9 +24,10 @@ if(WIN32)
 	set(LIBS libcryptoMT crypt32 ws2_32)
 else()
     set(STDFLAG -std=c++17)
-	set(LIBS pthread crypto stdc++fs)
+	set(LIBS pthread crypto c++experimental)
 endif()
 
+# set(LIBS pthread crypto stdc++fs)
 
 add_executable(fastzip ${SOURCE_FILES})
 target_include_directories(fastzip PRIVATE src/igzip src/openssl/include)

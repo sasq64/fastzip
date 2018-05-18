@@ -113,6 +113,9 @@ void FUnzip::smartDestDir(ZipStream &zs)
 
 static inline void setMeta(const std::string &name, uint16_t flags, uint32_t datetime, int uid, int gid, bool link = false)
 {
+	auto ft = msdosToFileTime(datetime);
+	fs::last_write_time(name, ft);
+
 #if 0
 	auto timestamp = msdosToUnixTime(datetime);
 	struct timeval t[2] = {{0,0}};

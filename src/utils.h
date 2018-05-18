@@ -11,6 +11,8 @@
 #include <ctime>
 #include <set>
 
+#include <experimental/filesystem>
+
 #ifdef _WIN32
 #define PATH_SEPARATOR '\\'
 #else
@@ -61,8 +63,8 @@ std::vector<std::basic_string<C> > split(const C *s, const std::string &delim = 
 
 bool fileExists(const std::string &name);
 
-void listFiles(char *dirName, std::function<void(const std::string &path)> &f);
-void listFiles(const std::string &dirName, std::function<void(const std::string &path)> f);
+void listFiles(char *dirName, const std::function<void(const std::string &path)>& f);
+void listFiles(const std::string &dirName, const std::function<void(const std::string &path)>& f);
 void removeFiles(const std::string &dirName);
 
 template<class CONTAINER> void listFiles(char *dirName, CONTAINER &rc, int &strSize)
@@ -148,7 +150,8 @@ private:
     bool dirty = false;
 };
 
-uint32_t msdosToUnixTime(uint32_t m);
+std::time_t msdosToUnixTime(uint32_t m);
+std::experimental::filesystem::file_time_type msdosToFileTime(uint32_t m);
 void makedir(const std::string &name);
 void makedirs(const std::string &path);
 std::string path_directory(const std::string &name);

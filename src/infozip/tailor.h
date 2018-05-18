@@ -227,7 +227,7 @@
 #endif /* !NO_STDLIB_H */
 
 #ifndef NO_UNISTD_H
-//#  include <unistd.h> /* usually defines _POSIX_VERSION */
+#  include <unistd.h> /* usually defines _POSIX_VERSION */
 #endif /* !NO_UNISTD_H */
 
 #ifndef NO_FCNTL_H
