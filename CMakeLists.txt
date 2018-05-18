@@ -24,7 +24,7 @@ if(WIN32)
 	set(LIBS libcryptoMT crypt32 ws2_32)
 else()
     set(STDFLAG -std=c++17)
-	set(LIBS pthread -l:libcrypto.so.1.0.0)
+	set(LIBS pthread crypto stdc++fs)
 endif()
 
 
