@@ -10,8 +10,7 @@
 
 #include <atomic>
 #include <cstring>
-#include <assert.h>
-#include <fcntl.h>
+#include <cassert>
 #include <string>
 #include <cstdio>
 #include <vector>
@@ -21,7 +20,6 @@
 static constexpr int S_IFLNK = 0120000;
 #endif
 
-using namespace std;
 namespace fs = std::experimental::filesystem;
 
 static int64_t copyfile(FILE *fout, int64_t size, FILE *fin)
@@ -47,24 +45,21 @@ static int64_t uncompress(FILE *fout, int64_t inSize, FILE *fin)
 	memset(&stream, 0, sizeof(stream));
 	mz_inflateInit2(&stream, -MZ_DEFAULT_WINDOW_BITS);
 
-	uint8_t *data;
+	auto data = std::make_unique<uint8_t[]>(inSize > 0 ? inSize : bufSize);
 
 	if(inSize > 0)
 	{
-		data = new uint8_t [inSize];
-		fread(data, 1, inSize, fin);
-		stream.next_in = data;
+		fread(&data[0], 1, inSize, fin);
+		stream.next_in = &data[0];
 		stream.avail_in = inSize;
-	} else {
-		data = new uint8_t [bufSize];
 	}
 	int rc = MZ_OK;
 	while (rc == MZ_OK)
 	{
 		if(inSize == 0 && stream.avail_in == 0)
 		{
-			stream.next_in = data;
-			stream.avail_in = fread(data, 1, bufSize, fin);
+			stream.next_in = &data[0];
+			stream.avail_in = fread(&data[0], 1, bufSize, fin);
 			if(stream.avail_in == 0)
 				break;
 		}
@@ -83,8 +78,6 @@ static int64_t uncompress(FILE *fout, int64_t inSize, FILE *fin)
 	
 	mz_inflate(&stream, MZ_FINISH);
 
-	delete [] data;
-
     return total;
 }
 
@@ -100,7 +93,7 @@ void FUnzip::smartDestDir(ZipStream &zs)
 	auto pos = n.find('/');
 	if(pos == std::string::npos)
 		return;
-	string first = n.substr(0, pos);
+	std::string first = n.substr(0, pos);
 
 	for(int i = 0; i< zs.size(); i++)
 	{
@@ -164,7 +157,7 @@ static void readExtra(FILE *fp, int exLen, int* uid, int* gid, int64_t *compSize
 		}
 		else if(extra.id == 0xd)
 		{
-			string link((char*)extra.unix.var, extra.size - 12);
+			std::string link((char*)extra.unix.var, extra.size - 12);
 			//printf("LINK:%s\n", link.c_str());
 		}
 	}
@@ -172,7 +165,7 @@ static void readExtra(FILE *fp, int exLen, int* uid, int* gid, int64_t *compSize
 
 void FUnzip::exec() 
 {
-	atomic<int> entryNum(0);
+	std::atomic<int> entryNum(0);
 	ZipStream zs{ zipName };
 	if (!zs.valid())
 		throw funzip_exception("Not a zip file");
@@ -195,18 +188,18 @@ void FUnzip::exec()
 	if(destinationDir != "" && destinationDir[destinationDir.size()-1] != '/')
 		destinationDir += "/";
 
-	vector<int> links;
-	vector<int> dirs;
-	mutex lm;
+	std::vector<int> links;
+	std::vector<int> dirs;
+	std::mutex lm;
 
-    vector<thread> workerThreads(threadCount);
+    std::vector<std::thread> workerThreads(threadCount);
 
     for (auto &t : workerThreads)
     {
 		FILE *fp = zs.copyFP();
 		auto verbose = this->verbose;
 		auto destDir = this->destinationDir;
-        t = thread([&zs, &entryNum, &lm, &links, &dirs, fp, verbose, destDir]
+        t = std::thread([&zs, &entryNum, &lm, &links, &dirs, fp, verbose, destDir]
         {
 			LocalEntry le;
             while (true)

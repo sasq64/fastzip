@@ -3,14 +3,11 @@
 #include <assert.h>
 #include <openssl/sha.h>
 
-using std::string;
-using std::vector;
-
 using namespace asn1;
 
-extern vector<unsigned char> fastzip_keystore;
+extern std::vector<unsigned char> fastzip_keystore;
 
-static const string base64_chars = "ABCDEFGHIJKLMNOPQRSTUVWXYZ"
+static const std::string base64_chars = "ABCDEFGHIJKLMNOPQRSTUVWXYZ"
                                    "abcdefghijklmnopqrstuvwxyz"
                                    "0123456789+/";
 
@@ -19,9 +16,9 @@ static inline bool is_base64(unsigned char c)
 	return (isalnum(c) || (c == '+') || (c == '/'));
 }
 
-string base64_encode(unsigned char const* bytes_to_encode, unsigned int in_len)
+std::string base64_encode(unsigned char const* bytes_to_encode, unsigned int in_len)
 {
-	string ret;
+	std::string ret;
 	int i = 0;
 	int j = 0;
 	unsigned char char_array_3[3];
@@ -60,9 +57,9 @@ string base64_encode(unsigned char const* bytes_to_encode, unsigned int in_len)
 	return ret;
 }
 
-string toPem(vector<uint8_t> key)
+std::string toPem(std::vector<uint8_t> key)
 {
-	string rc = "-----BEGIN RSA PRIVATE KEY-----\n";
+	std::string rc = "-----BEGIN RSA PRIVATE KEY-----\n";
 	int pos = 0;
 	int l = key.size();
 	while (pos < l) {
@@ -79,16 +76,16 @@ const int DIGEST_LEN = 20;
 
 #define arraycopy8(source, soff, target, toff, len) memcpy(&target[toff], &source[soff], len)
 
-vector<uint8_t> recoverKey(const string& password, const vector<uint8_t>& protectedKey)
+std::vector<uint8_t> recoverKey(const std::string& password, const std::vector<uint8_t>& protectedKey)
 {
-	vector<uint8_t> passwdBytes(password.length() * 2);
+	std::vector<uint8_t> passwdBytes(password.length() * 2);
 	for (unsigned i = 0, j = 0; i < password.length(); i++) {
 		passwdBytes[j++] = 0;
 		passwdBytes[j++] = (uint8_t)password[i];
 	}
 
 	// Get the salt associated with this key (the first SALT_LEN bytes protectedKey
-	vector<uint8_t> salt(SALT_LEN);
+	std::vector<uint8_t> salt(SALT_LEN);
 	arraycopy8(protectedKey, 0, salt, 0, SALT_LEN);
 
 	// Determine the number of digest rounds
@@ -98,11 +95,11 @@ vector<uint8_t> recoverKey(const string& password, const vector<uint8_t>& protec
 		numRounds++;
 
 	// Get the encrypted key portion and store it in "encrKey"
-	vector<uint8_t> encrKey(encrKeyLen);
+	std::vector<uint8_t> encrKey(encrKeyLen);
 	arraycopy8(protectedKey, SALT_LEN, encrKey, 0, encrKeyLen);
 
 	// Set up the uint8_t array which will be XORed with "encrKey"
-	vector<uint8_t> xorKey(encrKeyLen);
+	std::vector<uint8_t> xorKey(encrKeyLen);
 
 	SHA_CTX context;
 	SHA1_Init(&context);
@@ -125,7 +122,7 @@ vector<uint8_t> recoverKey(const string& password, const vector<uint8_t>& protec
 	}
 
 	// XOR "encrKey" with "xorKey", and store the result in "plainKey"
-	vector<uint8_t> plainKey(encrKeyLen);
+	std::vector<uint8_t> plainKey(encrKeyLen);
 	for (int i = 0; i < encrKeyLen; i++) {
 		plainKey[i] = (uint8_t)(encrKey[i] ^ xorKey[i]);
 	}
@@ -148,12 +145,12 @@ vector<uint8_t> recoverKey(const string& password, const vector<uint8_t>& protec
 	return plainKey;
 }
 
-KeyStore::KeyStore(const string& name, const string& pass)
+KeyStore::KeyStore(const std::string& name, const std::string& pass)
 {
 	load(name, pass);
 }
 
-bool KeyStore::load(const string& name, const string& pass)
+bool KeyStore::load(const std::string& name, const std::string& pass)
 {
 	if (name == "") {
 		return load(fastzip_keystore, pass);
@@ -165,7 +162,7 @@ bool KeyStore::load(const string& name, const string& pass)
 	}
 }
 
-bool KeyStore::load(const vector<uint8_t>& keystore, const string& pass)
+bool KeyStore::load(const std::vector<uint8_t>& keystore, const std::string& pass)
 {
 	MemBuffer buf(keystore);
 	if (buf.size() < 12)
@@ -173,7 +170,7 @@ bool KeyStore::load(const vector<uint8_t>& keystore, const string& pass)
 	return load(buf, pass);
 }
 
-bool KeyStore::load(MemBuffer& buf, const string& pass)
+bool KeyStore::load(MemBuffer& buf, const std::string& pass)
 {
 	auto magic = buf.read<uint32_t>();
 	if (magic != 0xfeedfeed)
@@ -185,9 +182,9 @@ bool KeyStore::load(MemBuffer& buf, const string& pass)
 	return true;
 }
 
-vector<uint8_t> KeyStore::getKey(const string& pass, const string& name)
+std::vector<uint8_t> KeyStore::getKey(const std::string& pass, const std::string& name)
 {
-	vector<uint8_t> privateKey;
+	std::vector<uint8_t> privateKey;
 
 	membuf.reset();
 	membuf.seek(8);

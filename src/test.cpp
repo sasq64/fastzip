@@ -7,6 +7,8 @@
 #include "funzip.h"
 #include "utils.h"
 
+#include <io.h>
+
 enum {
 	EMPTY = 1
 };
@@ -15,7 +17,7 @@ std::vector<std::string> createFiles(const std::string &templ, int count, int ma
 {
 	makedirs(path_directory(templ));
 	auto tx = templ + "XXXXXXXX";
-	char t[tx.size()+1];
+	char t[1024];
 	std::vector<std::string> files(count);
 	for(auto &f : files)
 	{

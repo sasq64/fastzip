@@ -1,7 +1,6 @@
 cmake_minimum_required(VERSION 3.1)
 project(fastzip)
 set(SOURCE_FILES
-src/main.cpp
 src/fastzip_keystore.cpp
 src/ziparchive.cpp
 src/zipstream.cpp
@@ -19,9 +18,15 @@ src/infozip/trees.cpp
 )
 
 if(WIN32)
-    set(STDFLAG /std:c++17)
-    link_directories(prebuilt/win)
-	set(LIBS libcryptoMT crypt32 ws2_32)
+	if(MSVC) 
+		set(STDFLAG /std:c++17)
+		link_directories(prebuilt/win)
+		set(LIBS libcryptoMT crypt32 ws2_32)
+		set(CMAKE_CXX_FLAGS "-DNO_UNISTD_H /EHsc")
+	else()
+		set(STDFLAG -std=c++17)
+		set(LIBS pthread crypto stdc++fs)
+	endif()
 else()
     set(STDFLAG -std=c++17)
 	set(LIBS pthread crypto c++experimental)
@@ -29,7 +34,12 @@ endif()
 
 # set(LIBS pthread crypto stdc++fs)
 
-add_executable(fastzip ${SOURCE_FILES})
+add_executable(fastzip src/main.cpp ${SOURCE_FILES})
 target_include_directories(fastzip PRIVATE src/igzip src/openssl/include)
 target_compile_options(fastzip PRIVATE ${STDFLAG})
 target_link_libraries(fastzip PRIVATE ${LIBS})
+
+add_executable(fstest src/testmain.cpp src/test.cpp ${SOURCE_FILES})
+target_include_directories(fstest PRIVATE src/igzip src/openssl/include)
+target_compile_options(fstest PRIVATE ${STDFLAG})
+target_link_libraries(fstest PRIVATE ${LIBS})
