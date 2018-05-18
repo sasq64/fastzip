@@ -21,7 +21,7 @@ void sign(ZipArchive &zipArchive, KeyStore &keyStore, const string &digestFile)
 
     string manifestMF = head + digestFile;
     uint8_t manifestSha[SHA_LEN];
-    SHA_Init(&context);
+    SHA1_Init(&context);
     SHA1_Update(&context, manifestMF.c_str(), manifestMF.length());
     SHA1_Final(manifestSha, &context);
 
@@ -52,7 +52,7 @@ void sign(ZipArchive &zipArchive, KeyStore &keyStore, const string &digestFile)
 
         ptr += 4;
 
-        SHA_Init(&context);
+        SHA1_Init(&context);
         SHA1_Update(&context, digestPtr, ptr - digestPtr);
         SHA1_Final(sha, &context);
         memcpy(ptr - 32, base64_encode(sha, SHA_LEN).c_str(), 28);
@@ -72,7 +72,7 @@ void sign(ZipArchive &zipArchive, KeyStore &keyStore, const string &digestFile)
     unsigned char digest[SHA_LEN];
     memset(digest, 0, SHA_LEN);
 
-    SHA_Init(&context);
+    SHA1_Init(&context);
     SHA1_Update(&context, certSF.c_str(), certSF.size());
     SHA1_Final(digest, &context);
 

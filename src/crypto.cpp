@@ -105,7 +105,7 @@ vector<uint8_t> recoverKey(const string& password, const vector<uint8_t>& protec
 	vector<uint8_t> xorKey(encrKeyLen);
 
 	SHA_CTX context;
-	SHA_Init(&context);
+	SHA1_Init(&context);
 
 	uint8_t digest[DIGEST_LEN];
 	arraycopy8(salt, 0, digest, 0, DIGEST_LEN);
@@ -115,7 +115,7 @@ vector<uint8_t> recoverKey(const string& password, const vector<uint8_t>& protec
 		SHA1_Update(&context, &passwdBytes[0], passwdBytes.size());
 		SHA1_Update(&context, &digest[0], DIGEST_LEN);
 		SHA1_Final(&digest[0], &context);
-		SHA_Init(&context);
+		SHA1_Init(&context);
 		// Copy the digest into "xorKey"
 		if (i < numRounds - 1) {
 			arraycopy8(digest, 0, xorKey, xorOffset, DIGEST_LEN);

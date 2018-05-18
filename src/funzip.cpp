@@ -17,6 +17,9 @@
 #include <vector>
 
 #include <experimental/filesystem>
+#ifndef S_IFLNK
+static constexpr int S_IFLNK = 0120000;
+#endif
 
 using namespace std;
 namespace fs = std::experimental::filesystem;
@@ -245,9 +248,9 @@ void FUnzip::exec()
 				FILE* fpout = fopen(name.c_str(), "wb");
 				if(!fpout)
 				{
-					char errstr[128];
-					strerror_r(errno, errstr, sizeof(errstr));
-					fprintf(stderr, "**Warning: Could not write '%s' (%s)\n", name.c_str(), errstr);
+					//char errstr[128];
+					//strerror_r(errno, errstr, sizeof(errstr));
+					//fprintf(stderr, "**Warning: Could not write '%s' (%s)\n", name.c_str(), errstr);
 					continue;
 				}
 				if(le.method == 0)

@@ -7,11 +7,13 @@
 #include <cstdio>
 #include <cstdlib>
 #include <cctype>
-#include <unistd.h>
 
 #include <string>
 #include <vector>
 #include <thread>
+
+#include <io.h>
+
 const std::string helpText =
     R"(
 Fastzip v1.1 by Jonas Minnberg

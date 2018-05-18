@@ -21,12 +21,14 @@ src/infozip/trees.cpp
 if(WIN32)
     set(STDFLAG /std:c++17)
     link_directories(prebuilt/win)
+	set(LIBS libcryptoMT crypt32 ws2_32)
 else()
     set(STDFLAG -std=c++17)
+	set(LIBS pthread -l:libcrypto.so.1.0.0)
 endif()
 
 
 add_executable(fastzip ${SOURCE_FILES})
 target_include_directories(fastzip PRIVATE src/igzip src/openssl/include)
 target_compile_options(fastzip PRIVATE ${STDFLAG})
-target_link_libraries(fastzip PRIVATE pthread -l:libcrypto.so.1.0.0)
+target_link_libraries(fastzip PRIVATE ${LIBS})

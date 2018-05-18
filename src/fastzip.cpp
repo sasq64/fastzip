@@ -51,7 +51,7 @@ static int store_compressed(FILE* fp, int inSize, uint8_t* target, uint8_t* sha)
 		stream.avail_in = inSize;
 
 		SHA_CTX context;
-		SHA_Init(&context);
+		SHA1_Init(&context);
 
 		while (stream.avail_in > 0) {
 			stream.next_out = buf;
@@ -77,7 +77,7 @@ static PackResult store_uncompressed(FILE* fp, int inSize, uint8_t* out, size_t*
 
 	if (sha) {
 		SHA_CTX context;
-		SHA_Init(&context);
+		SHA1_Init(&context);
 		SHA1_Update(&context, out, size);
 		SHA1_Final(sha, &context);
 	}
@@ -106,7 +106,7 @@ static PackResult intel_deflate(FILE* fp, size_t inSize, uint8_t* buffer, size_t
 
 	if (sha) {
 		SHA_CTX context;
-		SHA_Init(&context);
+		SHA1_Init(&context);
 		SHA1_Update(&context, fileData, inSize);
 		SHA1_Final(sha, &context);
 	}
@@ -210,7 +210,7 @@ static PackResult infozip_deflate(int packLevel, FILE* fp, int inSize, uint8_t* 
 
 	if (sha) {
 		SHA_CTX context;
-		SHA_Init(&context);
+		SHA1_Init(&context);
 		SHA1_Update(&context, fileData, inSize);
 		SHA1_Final(sha, &context);
 	}
