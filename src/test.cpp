@@ -7,7 +7,9 @@
 #include "funzip.h"
 #include "utils.h"
 
+#ifdef _WIN32
 #include <io.h>
+#endif
 
 enum {
 	EMPTY = 1

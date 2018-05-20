@@ -17,6 +17,8 @@ src/infozip/deflate.cpp
 src/infozip/trees.cpp
 )
 
+set(CMAKE_EXPORT_COMPILE_COMMANDS 1)
+
 if(WIN32)
 	if(MSVC) 
 		set(STDFLAG /std:c++17)
@@ -29,9 +31,11 @@ if(WIN32)
 	endif()
 else()
     set(STDFLAG -std=c++17)
-	set(LIBS pthread crypto c++experimental)
+    #set(LIBS pthread crypto c++experimental)
+		set(LIBS pthread crypto stdc++fs)
 endif()
 
+set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -g -O0")
 # set(LIBS pthread crypto stdc++fs)
 
 add_executable(fastzip src/main.cpp ${SOURCE_FILES})

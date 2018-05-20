@@ -4,6 +4,7 @@
 #include "igzip/c_code/igzip_lib.h"
 #endif
 
+#include "file.h"
 #include "inflate.h"
 #include "sign.h"
 #include "utils.h"
@@ -33,10 +34,10 @@ int64_t iz_deflate(int level, char* tgt, char* src, unsigned long tgtsize,
                    unsigned long srcsize);
 uint32_t crc32_fast(const void* data, size_t length, uint32_t previousCrc32 = 0);
 
-static int store_compressed(FILE* fp, int inSize, uint8_t* target, uint8_t* sha)
+static int store_compressed(File& f, int inSize, uint8_t* target, uint8_t* sha)
 {
 	uint8_t* fileData = target;
-	fread(fileData, 1, inSize, fp);
+    f.Read(fileData, inSize);
 
 	int total = 0;
 	if (sha) {
@@ -70,10 +71,10 @@ static int store_compressed(FILE* fp, int inSize, uint8_t* target, uint8_t* sha)
 
 enum PackResult { RC_FAILED = -1, RC_COMPRESSED = 0, RC_STORED = 1 };
 
-static PackResult store_uncompressed(FILE* fp, int inSize, uint8_t* out, size_t* outSize,
+static PackResult store_uncompressed(File& f, int inSize, uint8_t* out, size_t* outSize,
                                      uint32_t* checksum, uint8_t* sha)
 {
-	int size = fread(out, 1, inSize, fp);
+    auto size = f.Read(out, inSize);
 
 	if (sha) {
 		SHA_CTX context;
@@ -92,14 +93,14 @@ static PackResult store_uncompressed(FILE* fp, int inSize, uint8_t* out, size_t*
 
 #ifdef WITH_INTEL
 
-static PackResult intel_deflate(FILE* fp, size_t inSize, uint8_t* buffer, size_t* outSize,
+static PackResult intel_deflate(File& f, size_t inSize, uint8_t* buffer, size_t* outSize,
                                 uint32_t* checksum, uint8_t* sha, int earlyOut)
 {
 	LZ_Stream2 stream __attribute__((aligned(16)));
 	const int IN_SIZE = 1024 * 32;
 
 	uint8_t* fileData = buffer + *outSize - inSize;
-	if (fread(fileData, 1, inSize, fp) != inSize)
+	if (f.Read(fileData, inSize) != inSize)
 		return RC_FAILED;
 
 	uint8_t* inBuf = fileData;
@@ -201,11 +202,11 @@ uint64_t shift_left(uint64_t* data, int size, int n)
 	return last;
 }
 
-static PackResult infozip_deflate(int packLevel, FILE* fp, int inSize, uint8_t* buffer,
+static PackResult infozip_deflate(int packLevel, File& f, int inSize, uint8_t* buffer,
                                   size_t* outSize, uint32_t* checksum, uint8_t* sha)
 {
 	uint8_t* fileData = buffer + *outSize - inSize;
-	if ((int)fread(fileData, 1, inSize, fp) != inSize)
+	if ((int)f.Read(fileData, inSize) != inSize)
 		return RC_FAILED;
 
 	if (sha) {
@@ -234,7 +235,7 @@ static PackResult infozip_deflate(int packLevel, FILE* fp, int inSize, uint8_t* 
 	return RC_COMPRESSED;
 }
 
-void Fastzip::packZipData(FILE* fp, int size, PackFormat inFormat, PackFormat outFormat,
+void Fastzip::packZipData(File& f, int size, PackFormat inFormat, PackFormat outFormat,
                           uint8_t* sha, ZipEntry& target)
 {
 	// Maximum size for deflate + space for buffer
@@ -244,7 +245,7 @@ void Fastzip::packZipData(FILE* fp, int size, PackFormat inFormat, PackFormat ou
 	target.store = false;
 
 	if (size == 0) {
-		store_uncompressed(fp, 0, outBuf, &outSize, &target.crc, sha);
+		store_uncompressed(f, 0, outBuf, &outSize, &target.crc, sha);
 		target.data = outBuf;
 		target.store = true;
 		target.dataSize = 0;
@@ -252,38 +253,38 @@ void Fastzip::packZipData(FILE* fp, int size, PackFormat inFormat, PackFormat ou
 	}
 
 	if (inFormat == UNCOMPRESSED) {
-		auto startPos = ftell_x(fp);
+		auto startPos = f.tell();
 		PackResult state;
 
 		if (outFormat >= ZIP1_COMPRESSED && outFormat <= ZIP9_COMPRESSED) {
-			state = infozip_deflate(outFormat, fp, size, outBuf, &outSize, &target.crc, sha);
+			state = infozip_deflate(outFormat, f, size, outBuf, &outSize, &target.crc, sha);
 			bits = outSize & 0x7;
 			outSize = (outSize + 7) >> 3;
 		}
 #ifdef WITH_INTEL
 		else if (outFormat == INTEL_COMPRESSED)
-			state = intel_deflate(fp, size, outBuf, &outSize, &target.crc, sha, earlyOut);
+			state = intel_deflate(f, size, outBuf, &outSize, &target.crc, sha, earlyOut);
 #endif
 		else
-			state = store_uncompressed(fp, size, outBuf, &outSize, &target.crc, sha);
+			state = store_uncompressed(f, size, outBuf, &outSize, &target.crc, sha);
 
 		if (state == RC_FAILED) {
 			warning(string("Compression failed! Storing '") + target.name + "' as a fallback");
-			fseek_x(fp, startPos, SEEK_SET);
-			state = store_uncompressed(fp, size, outBuf, &outSize, &target.crc, sha);
+			f.seek(startPos);
+			state = store_uncompressed(f, size, outBuf, &outSize, &target.crc, sha);
 		}
 		if (state == RC_STORED)
 			target.store = true;
 		target.originalSize = size;
 	} else if (inFormat > 0 && outFormat == COMPRESSED) {
 		// Keep format, just inflate to calculate sha if necessary
-		store_compressed(fp, size, outBuf, sha);
+		store_compressed(f, size, outBuf, sha);
 		outSize = size;
 	} else {
 		// Unpacking is not supported
 		warning(string("Unpacking not supported, storing '") + target.name +
 		        "' with original compression");
-		target.originalSize = store_compressed(fp, size, outBuf, sha);
+		target.originalSize = store_compressed(f, size, outBuf, sha);
 		outSize = size;
 	}
 
@@ -424,9 +425,9 @@ void Fastzip::exec()
 
 				bool skipFile = false;
 				ZipEntry entry;
-				FILE* fp = nullptr;
 				bool isPacked = false;
 				uint32_t dataSize;
+                File f{fileName.source};
 
 				if (doSign) {
 					if (fileName.target.substr(0, 8) == "META-INF") {
@@ -437,15 +438,11 @@ void Fastzip::exec()
 				entry.name = fileName.target;
 
 				if (fileName.size != 0) {
-					fp = fopen(fileName.source.c_str(), "rb");
-					fseek_x(fp, fileName.offset, SEEK_SET);
+                    f.seek(fileName.offset);
 					dataSize = fileName.size;
 				} else if (fileName.offset != 0xffffffff) {
-					fp = fopen(fileName.source.c_str(), "rb");
-					fseek_x(fp, fileName.offset, SEEK_SET);
-					LocalEntry le;
-					if (fread(&le, 1, sizeof(le), fp) != sizeof(le))
-						exit(-1);
+                    f.seek(fileName.offset);
+                    auto le = f.Read<LocalEntry>();
 
 					dataSize = le.compSize;
 					entry.originalSize = le.uncompSize;
@@ -453,7 +450,7 @@ void Fastzip::exec()
 
 					entry.timeStamp = msdosToUnixTime(le.dateTime);
 					entry.crc = le.crc;
-					fseek_x(fp, le.nameLen + le.exLen, SEEK_CUR);
+					f.seekForward(le.nameLen + le.exLen);
 				} else {
 					struct stat ss;
 					if (stat(fileName.source.c_str(), &ss) == 0) {
@@ -488,9 +485,7 @@ void Fastzip::exec()
 				}
 
 				if (!skipFile) {
-					if (!fp)
-						fp = fopen(fileName.source.c_str(), "rb");
-					if (!fp) {
+					if (!f.canRead()) {
 						warning(string("Could not read " + fileName.source));
 						skipFile = true;
 					}
@@ -498,12 +493,12 @@ void Fastzip::exec()
 				if (!skipFile) {
 					uint8_t sha[SHA_LEN];
 
-					packZipData(fp, dataSize, isPacked ? COMPRESSED : UNCOMPRESSED,
+					packZipData(f, dataSize, isPacked ? COMPRESSED : UNCOMPRESSED,
 					            isPacked && fileName.packFormat > 0
 					                ? COMPRESSED
 					                : (PackFormat)fileName.packFormat,
 					            doSign ? sha : nullptr, entry);
-					fclose(fp);
+                    f.close();
 
 					if (verbose) {
 						int percent = 0;

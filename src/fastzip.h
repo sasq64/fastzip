@@ -62,6 +62,7 @@ struct FileTarget
 
 struct ZipEntry;
 class ZipArchive;
+class File;
 
 class Fastzip
 {
@@ -97,7 +98,7 @@ private:
             fprintf(stderr, "**Warn: %s\n", text.c_str());
         };
 
-    void packZipData(FILE *fp, int size, PackFormat inFormat, PackFormat outFormat, uint8_t *sha,
+    void packZipData(File& f, int size, PackFormat inFormat, PackFormat outFormat, uint8_t *sha,
         ZipEntry &target);
 
     UniQueue<FileTarget> fileNames;
