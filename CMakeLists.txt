@@ -1,6 +1,15 @@
 cmake_minimum_required(VERSION 3.1)
 project(fastzip)
 
+enable_language(ASM_NASM)
+set(CMAKE_ASM_NASM_COMPILER yasm)
+
+set(CMAKE_CXX_FLAGS_RELEASE "${CMAKE_CXX_FLAGS} -O2")
+set(CMAKE_C_FLAGS_RELEASE "${CMAKE_C_FLAGS} -O2")
+
+set(CMAKE_CXX_FLAGS_DEBUG "${CMAKE_CXX_FLAGS} -g -O0")
+set(CMAKE_C_FLAGS_DEBUG "${CMAKE_C_FLAGS} -g -O0")
+
 set(SOURCE_FILES
 	src/fastzip_keystore.cpp
 	src/ziparchive.cpp
@@ -18,6 +27,20 @@ set(SOURCE_FILES
 	src/infozip/trees.cpp
 )
 
+set(INTEL_FILES
+    src/igzip/igzip1c_body.asm
+    src/igzip/igzip1c_finish.asm
+    src/igzip/c_code/common.cpp
+    src/igzip/c_code/crc.cpp
+    src/igzip/c_code/crc_utils.asm
+    src/igzip/c_code/hufftables_c.cpp
+    src/igzip/bitbuf2.asm
+    src/igzip/crc.asm
+    src/igzip/huffman.asm
+    src/igzip/hufftables.asm
+    src/igzip/init_stream.asm
+    src/igzip/utils.asm
+)
 set(CMAKE_EXPORT_COMPILE_COMMANDS 1)
 
 if(MSVC) 
@@ -26,14 +49,18 @@ if(MSVC)
 	set(LIBS libcryptoMT crypt32 ws2_32)
 	set(CMAKE_CXX_FLAGS "-DNO_UNISTD_H /EHsc")
 elseif(APPLE)
-    set(STDFLAG -std=c++17)
+	set(STDFLAG -std=c++17)
     set(LIBS pthread crypto c++experimental)
 else()
     set(STDFLAG -std=c++17)
 	set(LIBS pthread crypto stdc++fs)
 endif()
 
-set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -g -O0")
+if(USE_INTEL)
+	add_compile_options(-I ${CMAKE_CURRENT_SOURCE_DIR}/src/igzip/)
+	target_compile_definitions(fastzip PRIVATE -DWITH_INTEL)
+	add_executable(fastzip src/main.cpp ${SOURCE_FILES} ${INTEL_FILES})
+endif()
 
 add_executable(fastzip src/main.cpp ${SOURCE_FILES})
 target_include_directories(fastzip PRIVATE src/igzip src/openssl/include)

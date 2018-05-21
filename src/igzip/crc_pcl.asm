@@ -200,11 +200,11 @@
 
 	; {XP X3 X2 X1 X0} = {xI HG FE DC BA}
 	shl	%%size, 4	; size *= 16
-	lea	%%gtmp, [pshufb_shf_table - 16 wrt rip]
+	lea	%%gtmp, [rel pshufb_shf_table - 16]
 	movdqa	%%shl, [%%gtmp + %%size]		; shl constant
 ;	movdqa	%%shl, [pshufb_shf_table - 16 + %%size]	; shl constant
 	movdqa	%%shr, %%shl
-	pxor %%shr, [mask3 wrt rip]			; shr constant
+	pxor %%shr, [rel mask3]			; shr constant
 
 	movdqa	%%tmp2, %%x0	; tmp2 = BA
 	pshufb	%%tmp2, %%shl	; tmp2 = A0

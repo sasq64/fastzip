@@ -69,7 +69,6 @@ bool fileExists(const std::string &name)
 
 void _listFiles(char *dirName, const std::function<void(const std::string &path)>& f)
 {
-	printf("Iterating %s\n", dirName);
 	for (const auto& p : fs::directory_iterator(dirName)) {
 		auto path = p.path().string();
 		if (path[0] == '.' && (path[1] == 0 || (path[1] == '.' && path[2] == 0)))

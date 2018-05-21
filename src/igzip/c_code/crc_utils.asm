@@ -32,7 +32,7 @@
 ; Functional versions of CRC macros
 
 %define NO_CRC_DATA_EXTERNS
-%include "../crc_pcl.asm"
+%include "crc_pcl.asm"
 
 
 %define crc_0		xmm0	; in/out: crc state

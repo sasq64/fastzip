@@ -231,7 +231,7 @@ skip1:
 	movdqa	crc_1, [stream + _internal_state_crc + 1*16]
 	movdqa	crc_2, [stream + _internal_state_crc + 2*16]
 	movdqa	crc_3, [stream + _internal_state_crc + 3*16]
-	movdqa	crc_fold, [fold_4 wrt rip]
+	movdqa	crc_fold, [rel fold_4]
 
 	; state->bitbuf.set_buf(stream->next_out, stream->avail_out);
 	mov	m_out_buf, [stream + _next_out]
@@ -259,7 +259,7 @@ loop1:
 
 	; if (x > D) x = D;
 	cmp	x, D
-	cmova	x, [const_D wrt rip]
+	cmova	x, [rel const_D]
 
 	; if (blen < D) x = blen;
 	cmp	blen, D

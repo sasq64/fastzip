@@ -86,7 +86,7 @@ extern dcodes
 %define %%lenq %3	; 64-bit TMP
 
 ;	mov	%%len, [dist_table - 4 + 4*%%dist]
-	lea	%%lenq, [dist_table - 4 wrt rip]
+	lea	%%lenq, [rel dist_table - 4]
 	mov	%%len, [%%lenq + 4*%%distq]
 	mov	%%code, %%len
 	and	%%len, 0xFF;
@@ -153,7 +153,7 @@ extern dcodes
 %define %%lenq %3	; 64-bit TMP
 
 ;	mov	%%len, [len_table - 12 + 4*%%length]
-	lea	%%lenq, [len_table - 12 wrt rip]
+	lea	%%lenq, [rel len_table - 12]
 	mov	%%len, [%%lenq + 4*%%lengthq]
 	mov	%%code, %%len
 	and	%%len, 0xFF;
@@ -173,7 +173,7 @@ extern dcodes
 %define %%lenq %3	; 64-bit TMP
 
 ;	movzx	%%len, word [lit_table + 4*%%lit]
-	lea	%%lenq, [lit_table wrt rip]
+	lea	%%lenq, [rel lit_table wrt]
 	mov	%%len, dword [%%lenq + 4*%%litq]
 	mov	%%code, %%len
 	and	%%len, 0xF;
@@ -186,7 +186,7 @@ extern dcodes
 %define %%len  %3d	; 32-bit OUT
 %define %%lenq %3	; 64-bit TMP
 
-	mov	%%len, dword [lit_table + 4*%%lit wrt rip]
+	mov	%%len, dword [rel lit_table + 4*%%lit]
 	mov	%%code, %%len
 	and	%%len, 0xF;
 	shr	%%code, 4
@@ -205,7 +205,7 @@ extern dcodes
 %define %%lenq %3	; 64-bit TMP
 
 ;	movzx	%%len, word [lit_table + 2*%%lit]
-	lea	%%lenq, [lit_table wrt rip]
+	lea	%%lenq, [rel lit_table]
 	movzx	%%len, word [%%lenq + 2*%%litq]
 	mov	%%code, %%len
 	and	%%len, 0xF;
@@ -219,7 +219,7 @@ extern dcodes
 %define %%lenq %3	; 64-bit TMP
 
 ;	movzx	%%len, word [lit_table + 2*%%lit]
-	lea	%%lenq, [lit_table wrt rip]
+	lea	%%lenq, [rel lit_table]
 	movzx	%%len, word [%%lenq + 2*%%litq]
 	mov	%%code, %%len
 	and	%%len, 0xF;

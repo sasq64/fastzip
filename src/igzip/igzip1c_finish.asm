@@ -194,7 +194,7 @@ fast_lz2_finish:
 
 	; if (tmp_len > 258) tmp_len = 258;
 	cmp	tmp4, 258
-	cmovg	tmp4, [c258 wrt rip]
+	cmovg	tmp4, [rel c258]
 
 	; tmp_len = compare(state->file_start + f_i,
         ;               state->file_start + f_i - tmp_dist, tmp_len);
