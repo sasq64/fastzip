@@ -1,5 +1,7 @@
 obj/
 winobj/
+build/
+temp/
 fastzip
 fastzip.exe
 *.zip

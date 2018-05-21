@@ -112,81 +112,12 @@ int main(int argc, char** argv)
 	std::string HOME = getenv("HOME");
 #endif
 
-    static CLI::App opts{"fastzip"};
-
 	int i = 1;
 	/* if (strcmp(argv[1], "x") == 0 && !fileExists("x")) { */
 	/* 	extractMode = true; */
 	/* 	i++; */
 	/* } */
 
-	std::vector<std::string> signArgs;
-	std::vector<std::string> dirNames;
-
-	opts.add_option("zipfile", fs.zipfile, "Zip file to create or extract");
-	opts.add_option("directories", dirNames, "File or directory to compress")->check([&](const std::string &n) -> std::string {
-		if(n[0] == '-') {
-			if(n.length() == 2 && std::isdigit(n[1])) {
-				packLevel = (int)n[1] - 0x30;
-				if (packLevel > 0)
-					packMode = INFOZIP;
-				printf("Packlevel %d", packLevel);
-			}
-			return "";
-		}
-		PackFormat packFormat =
-			(packLevel == 0 || packMode == INFOZIP ? (PackFormat)packLevel
-												   : INTEL_COMPRESSED);
-		fs.addDir(n, packFormat);
-		noFiles = false;
-		return "";
-	});
-	opts.add_flag_function("-l", [&](size_t) { listFiles = extractMode = true; }, "List files in archive.");
-	opts.add_flag("-j,--junk-paths", fs.junkPaths, "Strip initial part of path names.");
-	opts.add_option("-t,--threads", fs.threadCount, "Worker thread count. Defaults to number of CPU cores.");
-	opts.add_flag("-v,--verbose", fs.verbose, "Print filenames.");
-	opts.add_option("-d,--destination", destDir, "Destination directory for extraction. Defaults to 'smart' root directory. Use '-d .' for standard (unzip) behavour. ");
-	opts.add_flag("-x", extractMode, "Extract mode. Options below are ignored.");
-#ifdef WITH_INTEL
-	opts.add_flag_function("-z,--zip", [&](size_t) { packMode = INFOZIP; }, "Zip mode, better compression (default).");
-	opts.add_flag_function("-I,--intel", [&](size_t) { packMode = INTEL_FAST; }, "Intel mode. Fast compression.");
-#endif
-	opts.add_flag_function("--apk", [&](size_t) {
-		fs.storeExts = androidNopackExt;
-		fs.doSign = true;
-		fs.zipAlign = true;
-		fs.keystoreName = HOME + "/.android/debug.keystore";
-		fs.keyPassword = "android";
-	}, "Android mode shortcut. Sign with androkd debug key and align zip.");
-	opts.add_flag_function("-e,--early-out", [&](size_t) { fs.earlyOut = 98; }, "Give up early if file does not seem to compress.");
-	opts.add_option("-Z,--add-zip", dirNames, "Merge in another zip; keep compression on compressed files")->check([&](const std::string &n) -> std::string {
-		if (fileExists(n)) {
-			PackFormat packFormat =
-				(packLevel == 0 || packMode == INFOZIP ? (PackFormat)packLevel
-													   : INTEL_COMPRESSED);
-			fs.addZip(n, packFormat);
-		} else
-			warning(std::string("File not found: ") + n);
-		return "";
-	});
-	opts.add_option("-X,--store-ext", fs.storeExts, "Specify file extensions for files that should only be stored.");
-	opts.add_flag("-A,--align", fs.zipAlign, "Align zip.");
-	opts.add_flag("-s,--seq", fs.doSeq, "Store files in specified order. Impacts parallellism.");
-	opts.add_option("-S,--sign", signArgs, "Jarsign the zip using the keystore file.");
-
-    CLI11_PARSE(opts, argc, argv);
-
-	if(!signArgs.empty()) {
-		fs.keyPassword = "fastzip";
-		if (signArgs.size() > 0)
-			fs.keystoreName = signArgs[0];
-		if (signArgs.size() > 1)
-			fs.keyPassword = signArgs[1];
-		if (signArgs.size() > 2)
-			fs.keyName = signArgs[2];
-		fs.doSign = true;
-	}
-#ifdef XXX
 	for (; i < argc; i++) {
 		if (argv[i][0] == '-') {
 			std::string name;
@@ -285,7 +216,6 @@ int main(int argc, char** argv)
 			}
 		}
 	}
-#endif
 
 	if (!isatty(fileno(stdin))) {
 		char line[1024];

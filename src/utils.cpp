@@ -67,8 +67,9 @@ bool fileExists(const std::string &name)
     return stat(name.c_str(), &ss) == 0;
 }
 
-void listFiles(char *dirName, const std::function<void(const std::string &path)>& f)
+void _listFiles(char *dirName, const std::function<void(const std::string &path)>& f)
 {
+	printf("Iterating %s\n", dirName);
 	for (const auto& p : fs::directory_iterator(dirName)) {
 		auto path = p.path().string();
 		if (path[0] == '.' && (path[1] == 0 || (path[1] == '.' && path[2] == 0)))
@@ -82,9 +83,13 @@ void listFiles(char *dirName, const std::function<void(const std::string &path)>
 
 void listFiles(const std::string &dirName, const std::function<void(const std::string &path)>& f)
 {
+	if(!fs::is_directory(dirName)) {
+		f(dirName);
+		return;
+	}
     char path[16384];
     strcpy(path, dirName.c_str());
-    listFiles(path, f);
+    _listFiles(path, f);
 }
 
 time_t msdosToUnixTime(uint32_t m)
