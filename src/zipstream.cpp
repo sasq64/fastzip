@@ -12,12 +12,13 @@ static inline void error(const std::string &msg)
 	exit(1);
 }
 
-ZipStream::ZipStream(const std::string &zipName) : zipName(zipName)
+ZipStream::ZipStream(const std::string &zipName) : zipName(zipName), f{zipName}
 {
-	fp = fopen(zipName.c_str(), "rb");
-	if (!fp)
-		return;
+	//fp = fopen(zipName.c_str(), "rb");
+	//if (!fp)
+	//	return;
 	uint32_t id = 0;
+    auto* fp = f.filePointer();
 	fseek_x(fp, -22 + 5, SEEK_END);
 	int counter = 64*1024+8;
 	while (id != EndOfCD_SIG && counter > 0)
@@ -28,7 +29,7 @@ ZipStream::ZipStream(const std::string &zipName) : zipName(zipName)
 	}
 	if(counter <= 0)
 	{
-		fp = nullptr;
+        f.close();
 		return;
 	}
 
@@ -101,8 +102,6 @@ ZipStream::ZipStream(const std::string &zipName) : zipName(zipName)
 
 ZipStream::~ZipStream()
 {
-	if (fp)
-		fclose(fp);
 	if (comment)
 		delete [] comment;
 }

@@ -1,3 +1,5 @@
+#pragma once
+
 #include <string>
 #include <stdexcept>
 
@@ -30,8 +32,10 @@ public:
     {
     }
 
-	File(const std::string &name, const Mode mode = NONE) : name(name), mode(mode)
+	File(const std::string &name, const Mode mode = NONE) : name(name)
     {
+        if(mode != NONE)
+            open(mode);
     }
     
     File(const File&) = delete;
@@ -55,32 +59,46 @@ public:
         return t;
     }
 
-    size_t Read(uint8_t* target, size_t bytes) noexcept
+    template <typename T>
+    size_t Read(T* target, size_t bytes) noexcept
     {
+        open(READ);
         return fread(target, 1, bytes, fp);
     }
 
-    void seek(uint64_t pos)
+    template <typename T>
+    void Write(const T& t)
+    {
+        open(WRITE);
+        if(fwrite(&t, 1, sizeof(T), fp) != sizeof(T))
+            throw io_exception("Could not write object");
+    }
+
+    template <typename T>
+    size_t Write(const T* target, size_t bytes) noexcept
+    {
+        open(WRITE);
+        return fwrite(target, 1, bytes, fp);
+    }
+
+    enum Seek {
+        Set = SEEK_SET,
+        Cur = SEEK_CUR,
+        End = SEEK_END
+    };
+
+
+    void seek(int64_t pos, int whence = Seek::Set)
     {
         if(mode == NONE) open(READ);
 #ifdef _WIN32
-        _fseeki64(fp, pos, SEEK_SET);
+        _fseeki64(fp, pos, whence);
 #else
-        fseek(fp, pos, SEEK_SET);
+        fseek(fp, pos, whence);
 #endif
     }
 
-    void seekForward(uint64_t pos)
-    {
-        if(mode == NONE) open(READ);
-#ifdef _WIN32
-        _fseeki64(fp, pos, SEEK_CUR);
-#else
-        fseek(fp, pos, SEEK_CUR);
-#endif
-    }
-
-    uint64_t tell()
+    size_t tell() const
     {
 #ifdef _WIN32
         return _ftelli64(fp);
@@ -93,9 +111,20 @@ public:
         close();
     }
 
+    bool isOpen() const
+    {
+        return mode != NONE;
+    }
+
     bool canRead()
     {
         open(READ);
+        return fp != nullptr;
+    }
+
+    bool canWrite()
+    {
+        open(WRITE);
         return fp != nullptr;
     }
 
@@ -104,7 +133,7 @@ public:
         if(this->mode == mode) return;
         if(this->mode != NONE) throw io_exception();
         fp = fopen(name.c_str(), mode == READ ? "rb" : "wb");
-        printf("open %s %d got %p\n", name.c_str(), mode, fp);
+        //printf("open %s %d got %p\n", name.c_str(), mode, fp);
         this->mode = mode;
     }
 
@@ -114,13 +143,22 @@ public:
         fp = nullptr;
         mode = NONE;
     }
+
+    File dup() {
+        File f { name, mode };
+        if(mode != NONE)
+            f.seek(tell());
+        return f;
+    }
+
     FILE* filePointer()
     {
+        if(mode == NONE) open(READ);
         return fp;
     }
 private:
     std::string name;
-    Mode mode;
+    Mode mode = NONE;
     FILE* fp = nullptr;
 
 };

@@ -1,5 +1,7 @@
 #pragma once
 
+#include "file.h"
+
 #include <cstdio>
 #include <string>
 #include <vector>
@@ -21,7 +23,7 @@ public:
 
     ZipStream(const std::string &zipName);
 	~ZipStream();
-	bool valid() const { return fp != nullptr; }
+    bool valid() const { return f.isOpen(); }
 
     int size() const { return entries.size(); }
     Entry& getEntry(int i) { return entries[i]; }
@@ -29,10 +31,12 @@ public:
 
     template<typename T> T read()
     {
-        T t;
-        fread(&t, 1, sizeof(T), fp);
-        return t;
+        return f.Read<T>();
     }
+    
+	File dupFile() const {
+		return File(zipName, File::Mode::READ);
+	}
 
 	FILE *copyFP() const {
 		return fopen(zipName.c_str(), "rb");
@@ -40,5 +44,5 @@ public:
 
 private:
 	std::string zipName;
-    FILE *fp;
+    File f;
 };

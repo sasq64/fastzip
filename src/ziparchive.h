@@ -1,6 +1,6 @@
 #pragma once
 
-#include <string>
+#include "file.h"
 #include <cstdint>
 
 struct zip_exception
@@ -22,7 +22,6 @@ struct ZipEntry
 	uint16_t flags;
 	int uid;
 	int gid;
-    // uint8_t sha[SHA_LEN];
 };
 
 class ZipArchive
@@ -39,13 +38,12 @@ public:
         uint64_t uncompSize = 0, time_t ts = 0, uint32_t crc = 0, uint16_t flags = 0);
     void add(const ZipEntry &entry);
     void close();
-    FILE *getFile() { return fp; }
-    void write(const uint8_t *data, uint64_t size) { fwrite(data, 1, size, fp); }
+    void write(const uint8_t *data, uint64_t size) { f.Write(data, size); }
 
 private:
 	// NOTE: In case you need to support big endian you need to overload write()
-    template<typename T> void write(const T &t) { fwrite(&t, 1, sizeof(T), fp); }
-    void write(const std::string &s) { fwrite(s.c_str(), 1, s.length(), fp); }
+    template<typename T> void write(const T &t) { f.Write(t); }
+    void write(const std::string &s) { f.Write(s.c_str(), s.length()); }
 
     bool zipAlign = false;
     bool force64 = false;
@@ -53,7 +51,7 @@ private:
     uint8_t *entries;
     uint8_t *entryPtr;
     uint64_t entryCount;
-    FILE *fp;
+    File f;
     uint64_t lastHeader;
 };
 

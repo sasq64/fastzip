@@ -242,6 +242,7 @@ void Fastzip::packZipData(File& f, int size, PackFormat inFormat, PackFormat out
 	size_t outSize = size + (size / 16383 + 1) * 5 + 64 * 1024;
 	int bits = -1;
 	uint8_t* outBuf = new uint8_t[outSize];
+    //auto outBuf = std::make_unique<uint8_t[]>(outSize);
 	target.store = false;
 
 	if (size == 0) {
@@ -450,7 +451,7 @@ void Fastzip::exec()
 
 					entry.timeStamp = msdosToUnixTime(le.dateTime);
 					entry.crc = le.crc;
-					f.seekForward(le.nameLen + le.exLen);
+					f.seek(le.nameLen + le.exLen, File::Seek::Cur);
 				} else {
 					struct stat ss;
 					if (stat(fileName.source.c_str(), &ss) == 0) {
@@ -473,14 +474,6 @@ void Fastzip::exec()
 						// Add directories?
 						skipFile = true;
 					}
-					/*
-					                    if (ss.st_size >= 0x60000000)
-					                    {
-					                        warning(string("Skipping large file " +
-					   fileName.source));
-					                        skipFile = true;
-					                    }
-					*/
 					dataSize = entry.originalSize = ss.st_size;
 				}
 

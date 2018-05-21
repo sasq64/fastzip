@@ -2,15 +2,19 @@
 #include "utils.h"
 #include "zipformat.h"
 
+#include "file.h"
+
 #include <cassert>
 #include <time.h>
 #include <sys/stat.h>
 
 ZipArchive::ZipArchive(const std::string &fileName, int numFiles, int strLen)
+    :
+    f { fileName, File::WRITE }
 {
 	assert(sizeof(LocalEntry) == 30);
 	assert(sizeof(CentralDirEntry) == 46);
-	fp = fopen(fileName.c_str(), "wb");
+	//fp = fopen(fileName.c_str(), "wb");
 
 	// printf("Reserving space for %d files in %d bytes = %ld total\n", numFiles, strLen, strLen
 	// + numFiles * sizeof(CentralDirEntry));
@@ -22,8 +26,8 @@ ZipArchive::ZipArchive(const std::string &fileName, int numFiles, int strLen)
 
 ZipArchive::~ZipArchive()
 {
-	if (fp)
-		close();
+	//if (fp)
+	//	close();
 }
 
 void ZipArchive::addFile(const std::string &fileName, bool store, uint64_t compSize,
@@ -53,7 +57,7 @@ void ZipArchive::add(const ZipEntry &entry)
 		(lt->tm_mday << 16) | (lt->tm_hour << 11) | (lt->tm_min << 5) |
 		(lt->tm_sec >> 1);
 
-	lastHeader = ftell_x(fp);
+	lastHeader = f.tell(); //ftell_x(fp);
 
 	int fl = entry.name.length();
 	CentralDirEntry *e = (CentralDirEntry*)entryPtr;
@@ -131,12 +135,12 @@ void ZipArchive::add(const ZipEntry &entry)
 
 void ZipArchive::close()
 {
-	auto startCD = ftell_x(fp);
+	auto startCD = f.tell(); //tell_x(fp);
 
 	write(entries, entryPtr - entries);
-	auto sizeCD = ftell_x(fp) - startCD;
+	auto sizeCD = f.tell() - startCD;
 
-	auto endCD = ftell_x(fp);
+	auto endCD = f.tell();
 
 	bool end64 = force64;
 	if(!end64)
@@ -148,7 +152,7 @@ void ZipArchive::close()
 	if(end64)
 	{
 		EndOfCentralDir64 eod64 = {
-			0x06064b50, 44, 0x031e, 45, 0, 0, entryCount, entryCount, sizeCD, startCD
+			0x06064b50, 44, 0x031e, 45, 0, 0, entryCount, entryCount, (int64_t)sizeCD, (int64_t)startCD
 		};
 		write(eod64);
 		// Locator
@@ -167,8 +171,9 @@ void ZipArchive::close()
 
 	write<uint16_t>(0);
 
-	fclose(fp);
-	fp = nullptr;
+	//fclose(fp);
+	//fp = nullptr;
+    f.close();
 
 	delete[] entries;
 }

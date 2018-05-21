@@ -35,7 +35,7 @@ static int64_t copyfile(FILE *fout, int64_t size, FILE *fin)
 	return 0;
 }
 
-static int64_t uncompress(FILE *fout, int64_t inSize, FILE *fin)
+static int64_t uncompress(File& fout, int64_t inSize, File& fin)
 {
     int64_t total = 0;
 	uint8_t buf[65536];
@@ -49,7 +49,7 @@ static int64_t uncompress(FILE *fout, int64_t inSize, FILE *fin)
 
 	if(inSize > 0)
 	{
-		fread(&data[0], 1, inSize, fin);
+		fin.Read(&data[0], inSize);
 		stream.next_in = &data[0];
 		stream.avail_in = inSize;
 	}
@@ -59,7 +59,7 @@ static int64_t uncompress(FILE *fout, int64_t inSize, FILE *fin)
 		if(inSize == 0 && stream.avail_in == 0)
 		{
 			stream.next_in = &data[0];
-			stream.avail_in = fread(&data[0], 1, bufSize, fin);
+			stream.avail_in = fin.Read(&data[0], bufSize);
 			if(stream.avail_in == 0)
 				break;
 		}
@@ -70,7 +70,7 @@ static int64_t uncompress(FILE *fout, int64_t inSize, FILE *fin)
 		// Did we unpack anything?
 		if(stream.avail_out == bufSize)
 			return -1;
-		fwrite(buf, 1, bufSize - stream.avail_out, fout);
+		fout.Write(buf, bufSize - stream.avail_out);
 		total += (bufSize - stream.avail_out);
 	}
 	if(rc < 0)
@@ -133,13 +133,13 @@ static inline void setMeta(const std::string &name, uint16_t flags, uint32_t dat
 	}
 #endif
 }
-static void readExtra(FILE *fp, int exLen, int* uid, int* gid, int64_t *compSize = nullptr, int64_t *uncompSize = nullptr)
+static void readExtra(File& f, int exLen, int* uid, int* gid, int64_t *compSize = nullptr, int64_t *uncompSize = nullptr)
 {
 	Extra extra;
 	while(exLen > 0)
 	{
-		fread(&extra, 1, 4, fp);
-		fread(extra.data, 1, extra.size, fp);
+		f.Read((uint8_t*)&extra, 4);
+		f.Read(extra.data, extra.size);
 		exLen -= (extra.size+4);
 		//printf("EXTRA %x\n", extra.id);
 		if(extra.id == 0x7875)
@@ -196,10 +196,8 @@ void FUnzip::exec()
 
     for (auto &t : workerThreads)
     {
-		FILE *fp = zs.copyFP();
-		auto verbose = this->verbose;
-		auto destDir = this->destinationDir;
-        t = std::thread([&zs, &entryNum, &lm, &links, &dirs, fp, verbose, destDir]
+		//FILE *fp = zs.copyFP();
+        t = std::thread([&zs, &entryNum, &lm, &links, &dirs, f=zs.dupFile(), verbose=verbose, destDir=destinationDir]() mutable
         {
 			LocalEntry le;
             while (true)
@@ -221,17 +219,16 @@ void FUnzip::exec()
 					continue;
 				}
 
-				fseek_x(fp, e.offset, SEEK_SET);
-				if (fread(&le, 1, sizeof(le), fp) != sizeof(le))
-					throw funzip_exception("Corrupt zipfile");
+				f.seek(e.offset);
+                auto le = f.Read<LocalEntry>();
 
-				fseek_x(fp, le.nameLen, SEEK_CUR);
+				f.seek(le.nameLen, SEEK_CUR);
 				int gid = -1;
 				int uid = -1;
 				int64_t uncompSize = le.uncompSize;
 				int64_t compSize = le.compSize;
 				// Read extra fields
-				readExtra(fp, le.exLen, &uid, &gid, &compSize, &uncompSize);
+				readExtra(f, le.exLen, &uid, &gid, &compSize, &uncompSize);
 				auto name = destDir + e.name;
 				auto dname = path_directory(name);
 				if(dname != "" && !fileExists(dname))
@@ -241,8 +238,9 @@ void FUnzip::exec()
 					printf("%s\n", name.c_str());
 				//printf("%s %x %s %s\n", fileName, a, (a & S_IFDIR)  == S_IFDIR ? "DIR" : "", (a & S_IFLNK) == S_IFLNK ? "LINK" : ""); 
 
-				FILE* fpout = fopen(name.c_str(), "wb");
-				if(!fpout)
+				//FILE* fpout = fopen(name.c_str(), "wb");
+                auto fout = File{name, File::Mode::WRITE};
+				if(!fout.canWrite())
 				{
 					//char errstr[128];
 					//strerror_r(errno, errstr, sizeof(errstr));
@@ -250,34 +248,32 @@ void FUnzip::exec()
 					continue;
 				}
 				if(le.method == 0)
-					copyfile(fpout, uncompSize, fp);
+					copyfile(fout.filePointer(), uncompSize, f.filePointer());
 				else
-					uncompress(fpout, compSize, fp);
-				fclose(fpout);
+					uncompress(fout, compSize, f);
 				setMeta(name, e.flags, le.dateTime, uid, gid);
 			}
-			fclose(fp);
 		});
 	}
     for (auto &t : workerThreads)
 		t.join();
 
-	LocalEntry le;
+	//LocalEntry le;
 	char linkName[65536];
 	int uid, gid;
-	FILE *fp = zs.copyFP();
+	//FILE *fp = zs.copyFP();
+    auto f = zs.dupFile();
 	for(int i : links)
 	{
 		auto &e = zs.getEntry(i);
-		fseek_x(fp, e.offset, SEEK_SET);
-		if (fread(&le, 1, sizeof(le), fp) != sizeof(le))
-			throw funzip_exception("Corrupt zipfile");
+		f.seek(e.offset);
+        auto le = f.Read<LocalEntry>();
 
-		fseek_x(fp, le.nameLen, SEEK_CUR);
+		f.seek(le.nameLen, SEEK_CUR);
 		uid = gid = -1;
 		int64_t uncompSize = le.uncompSize;
-		readExtra(fp, le.exLen, &uid, &gid, nullptr, &uncompSize);
-		fread(linkName, 1, uncompSize, fp);
+		readExtra(f, le.exLen, &uid, &gid, nullptr, &uncompSize);
+		f.Read(linkName, uncompSize);
 		linkName[uncompSize] = 0;
 		auto name = destinationDir + e.name;
 		auto dname = path_directory(name);
@@ -293,13 +289,12 @@ void FUnzip::exec()
 	for(int i : dirs)
 	{
 		auto &e = zs.getEntry(i);
-		fseek_x(fp, e.offset, SEEK_SET);
-		if (fread(&le, 1, sizeof(le), fp) != sizeof(le))
-			exit(-1);
+		f.seek(e.offset);
+        auto le = f.Read<LocalEntry>();
 
-		fseek_x(fp, le.nameLen, SEEK_CUR);
+		f.seek(le.nameLen, SEEK_CUR);
 		uid = gid = -1;
-		readExtra(fp, le.exLen, &uid, &gid);
+		readExtra(f, le.exLen, &uid, &gid);
 		auto name = destinationDir + e.name;
 		auto l = name.length();
 		if(name[l-1] == '/')
@@ -309,6 +304,4 @@ void FUnzip::exec()
 
 	if(zs.comment)
 		puts(zs.comment);
-
-	fclose(fp);
 }
