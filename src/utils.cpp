@@ -107,7 +107,8 @@ fs::file_time_type msdosToFileTime(uint32_t m)
 
 void removeFiles(char *dirName)
 {
-	fs::remove_all(dirName);
+	std::error_code ec;
+	fs::remove_all(dirName, ec);
 }
 
 void removeFiles(const std::string &dirName)

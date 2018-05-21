@@ -22,17 +22,20 @@ static constexpr int S_IFLNK = 0120000;
 
 namespace fs = std::experimental::filesystem;
 
-static int64_t copyfile(FILE *fout, int64_t size, FILE *fin)
+static bool copyfile(File &fout, int64_t size, File &fin)
 {
+	if(!fout.canWrite())
+		return false;
 	uint8_t buf[65536*4];
 	while(size > 0)
 	{
-		int rc = fread(buf, 1, size < (int)sizeof(buf) ? size : sizeof(buf), fin);
+		int rc = fin.Read(buf, size < (int)sizeof(buf) ? size : sizeof(buf));
 		if(rc <= 0) return rc;
 		size -= rc;
-		fwrite(buf, 1, rc, fout);
+		fout.Write(buf, rc);
+
 	}
-	return 0;
+	return true;
 }
 
 static int64_t uncompress(File& fout, int64_t inSize, File& fin)
@@ -196,10 +199,8 @@ void FUnzip::exec()
 
     for (auto &t : workerThreads)
     {
-		//FILE *fp = zs.copyFP();
         t = std::thread([&zs, &entryNum, &lm, &links, &dirs, f=zs.dupFile(), verbose=verbose, destDir=destinationDir]() mutable
         {
-			LocalEntry le;
             while (true)
             {
 				int en = entryNum++;
@@ -238,17 +239,15 @@ void FUnzip::exec()
 					printf("%s\n", name.c_str());
 				//printf("%s %x %s %s\n", fileName, a, (a & S_IFDIR)  == S_IFDIR ? "DIR" : "", (a & S_IFLNK) == S_IFLNK ? "LINK" : ""); 
 
-				//FILE* fpout = fopen(name.c_str(), "wb");
                 auto fout = File{name, File::Mode::WRITE};
-				if(!fout.canWrite())
-				{
+				if(!fout.canWrite()) {
 					//char errstr[128];
 					//strerror_r(errno, errstr, sizeof(errstr));
 					//fprintf(stderr, "**Warning: Could not write '%s' (%s)\n", name.c_str(), errstr);
 					continue;
 				}
 				if(le.method == 0)
-					copyfile(fout.filePointer(), uncompSize, f.filePointer());
+					copyfile(fout, uncompSize, f);
 				else
 					uncompress(fout, compSize, f);
 				setMeta(name, e.flags, le.dateTime, uid, gid);
@@ -258,10 +257,8 @@ void FUnzip::exec()
     for (auto &t : workerThreads)
 		t.join();
 
-	//LocalEntry le;
 	char linkName[65536];
 	int uid, gid;
-	//FILE *fp = zs.copyFP();
     auto f = zs.dupFile();
 	for(int i : links)
 	{
