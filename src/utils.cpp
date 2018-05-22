@@ -14,45 +14,51 @@ void makedir(const std::string &name) {
 }
 
 void makedirs(const std::string &path) {
-	int start = 0;
-	while(true) {
-		auto pos = path.find_first_of("/\\", start);
-		if(pos != std::string::npos) {
-			makedir(path.substr(0, pos));
-			start = pos+1;
-        } else {
-            makedir(path);
-			break;
-        }
-	}
+	fs::create_directories(path);
+	/* int start = 0; */
+	/* while(true) { */
+	/* 	auto pos = path.find_first_of("/\\", start); */
+	/* 	if(pos != std::string::npos) { */
+	/* 		makedir(path.substr(0, pos)); */
+	/* 		start = pos+1; */
+        /* } else { */
+            /* makedir(path); */
+	/* 		break; */
+        /* } */
+	/* } */
 }
 
 std::string path_basename(const std::string &name) {
-	auto slashPos = name.rfind('/');
-	if(slashPos == std::string::npos)
-		slashPos = 0;
-	else
-		slashPos++;
-	auto dotPos = name.rfind('.');
-	if(dotPos == std::string::npos || dotPos < slashPos)
-		return name.substr(slashPos);
-	return name.substr(slashPos, dotPos-slashPos);
+
+	return fs::path(name).stem();
+
+	/* auto slashPos = name.rfind('/'); */
+	/* if(slashPos == std::string::npos) */
+	/* 	slashPos = 0; */
+	/* else */
+	/* 	slashPos++; */
+	/* auto dotPos = name.rfind('.'); */
+	/* if(dotPos == std::string::npos || dotPos < slashPos) */
+	/* 	return name.substr(slashPos); */
+	/* return name.substr(slashPos, dotPos-slashPos); */
 }
 
 std::string path_directory(const std::string &name) {
-	auto slashPos = name.rfind('/');
-	if(slashPos == std::string::npos)
-		slashPos = 0;
-	return name.substr(0, slashPos);
+	return fs::path(name).parent_path();
+	/* auto slashPos = name.rfind('/'); */
+	/* if(slashPos == std::string::npos) */
+	/* 	slashPos = 0; */
+	/* return name.substr(0, slashPos); */
 }
 
 std::string path_filename(const std::string &name) {
-	auto slashPos = name.rfind('/');
-	if(slashPos == std::string::npos)
-		slashPos = 0;
-	else
-		slashPos++;
-	return name.substr(slashPos);
+	return fs::path(name).filename();
+	/* auto slashPos = name.rfind('/'); */
+	/* if(slashPos == std::string::npos) */
+	/* 	slashPos = 0; */
+	/* else */
+	/* 	slashPos++; */
+	/* return name.substr(slashPos); */
 }
 
 bool startsWith(const std::string &name, const std::string &pref) {

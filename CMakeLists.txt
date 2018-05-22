@@ -4,8 +4,8 @@ project(fastzip)
 enable_language(ASM_NASM)
 set(CMAKE_ASM_NASM_COMPILER yasm)
 
-set(CMAKE_CXX_FLAGS_RELEASE "${CMAKE_CXX_FLAGS} -O2")
-set(CMAKE_C_FLAGS_RELEASE "${CMAKE_C_FLAGS} -O2")
+set(CMAKE_CXX_FLAGS_RELEASE "${CMAKE_CXX_FLAGS} -g -O2")
+set(CMAKE_C_FLAGS_RELEASE "${CMAKE_C_FLAGS} -g -O2")
 
 set(CMAKE_CXX_FLAGS_DEBUG "${CMAKE_CXX_FLAGS} -g -O0")
 set(CMAKE_C_FLAGS_DEBUG "${CMAKE_C_FLAGS} -g -O0")
@@ -56,11 +56,9 @@ else()
 	set(LIBS pthread crypto stdc++fs)
 endif()
 
-if(USE_INTEL)
-	add_compile_options(-I ${CMAKE_CURRENT_SOURCE_DIR}/src/igzip/)
-	target_compile_definitions(fastzip PRIVATE -DWITH_INTEL)
-	add_executable(fastzip src/main.cpp ${SOURCE_FILES} ${INTEL_FILES})
-endif()
+
+add_compile_options(-DWITH_INTEL -I ${CMAKE_CURRENT_SOURCE_DIR}/src/igzip/)
+set(SOURCE_FILES ${SOURCE_FILES} ${INTEL_FILES})
 
 add_executable(fastzip src/main.cpp ${SOURCE_FILES})
 target_include_directories(fastzip PRIVATE src/igzip src/openssl/include)

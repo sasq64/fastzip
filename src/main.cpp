@@ -20,8 +20,8 @@
 
 const std::string helpText =
     R"(
-Fastzip v1.1 by Jonas Minnberg
-(c) 2015 Unity Technologies
+Fastzip v1.2 by Jonas Minnberg
+(c) 2015-2018 Unity Technologies
 
 Usage: fastzip [options] <zipfile> <paths...>
        fastzip <file>.zip (Unpack)

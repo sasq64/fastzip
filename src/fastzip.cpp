@@ -28,7 +28,7 @@
 using std::string;
 using std::vector;
 
-const static int SHA_LEN = 20;
+static constexpr int SHA_LEN = 20;
 
 int64_t iz_deflate(int level, char* tgt, char* src, unsigned long tgtsize,
                    unsigned long srcsize);
