@@ -147,7 +147,7 @@ vec8 mkINT(uint64_t val)
             out.push_back(temp[i]);
     }
 
-    out[1] = out.size() - 2;
+    out[1] = (uint8_t)out.size() - 2;
 
     return out;
 }

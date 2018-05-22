@@ -1,14 +1,23 @@
 cmake_minimum_required(VERSION 3.1)
 project(fastzip)
 
-enable_language(ASM_NASM)
-set(CMAKE_ASM_NASM_COMPILER yasm)
+if(WITH_INTEL)
+	enable_language(ASM_NASM)
+	set(CMAKE_ASM_NASM_COMPILER yasm)
+endif()
 
+if(MSVC)
+set(CMAKE_CXX_FLAGS_RELEASE "${CMAKE_CXX_FLAGS} /OX")
+set(CMAKE_C_FLAGS_RELEASE "${CMAKE_C_FLAGS} /OX")
+set(CMAKE_CXX_FLAGS_DEBUG "${CMAKE_CXX_FLAGS} /Zi /Od")
+set(CMAKE_C_FLAGS_DEBUG "${CMAKE_C_FLAGS} /Zi /Od")
+else()
 set(CMAKE_CXX_FLAGS_RELEASE "${CMAKE_CXX_FLAGS} -g -O3 -fomit-frame-pointer")
-set(CMAKE_C_FLAGS_RELEASE "${CMAKE_C_FLAGS} -g -O3 -fomit-frame-pointer")
-
 set(CMAKE_CXX_FLAGS_DEBUG "${CMAKE_CXX_FLAGS} -g -O0")
 set(CMAKE_C_FLAGS_DEBUG "${CMAKE_C_FLAGS} -g -O0")
+set(CMAKE_C_FLAGS_RELEASE "${CMAKE_C_FLAGS} -g -O3 -fomit-frame-pointer")
+endif()
+
 
 set(SOURCE_FILES
 	src/fastzip_keystore.cpp
@@ -57,8 +66,10 @@ else()
 endif()
 
 
-add_compile_options(-DWITH_INTEL -I ${CMAKE_CURRENT_SOURCE_DIR}/src/igzip/)
-set(SOURCE_FILES ${SOURCE_FILES} ${INTEL_FILES})
+if(WITH_INTEL)
+	add_compile_options(-DWITH_INTEL -I ${CMAKE_CURRENT_SOURCE_DIR}/src/igzip/)
+	set(SOURCE_FILES ${SOURCE_FILES} ${INTEL_FILES})
+endif()
 
 add_executable(fastzip src/main.cpp ${SOURCE_FILES})
 target_include_directories(fastzip PRIVATE src/igzip src/openssl/include)

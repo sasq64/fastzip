@@ -1,5 +1,7 @@
 #pragma once
 
+#include "file.h"
+
 #include <cstdint>
 #include <cstdio>
 #include <cstring>
@@ -19,10 +21,9 @@ public:
         struct stat ss;
         if (stat(fileName.c_str(), &ss) >= 0 && ss.st_size > 0) {
             data.resize(ss.st_size);
-            FILE* fp = fopen(fileName.c_str(), "rb");
-            fread(&data[0], 1, ss.st_size, fp);
+            auto f = File{fileName};
+            f.Read(&data[0], ss.st_size);
             readpos = 0;
-            fclose(fp);
         }
     }
 
@@ -102,8 +103,8 @@ public:
 
     void seek(int s) { readpos += s; }
 
-    int pos() { return readpos; }
-    int size() { return data.size(); }
+    auto pos() { return readpos; }
+    auto size() { return data.size(); }
 
 private:
     std::vector<uint8_t> data;
@@ -117,7 +118,7 @@ struct DER
     std::vector<uint8_t> data;
     std::string text;
     uint64_t value;
-    int size() { return children.size(); }
+    auto size() { return children.size(); }
     DER& operator[](const int& i) { return children[i]; }
 };
 
