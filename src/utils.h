@@ -12,20 +12,6 @@
 
 #include <experimental/filesystem>
 
-#ifdef _WIN32
-#    define PATH_SEPARATOR '\\'
-#else
-#    define PATH_SEPARATOR '/'
-#endif
-
-#ifdef _WIN32
-#    define ftell_x _ftelli64
-#    define fseek_x _fseeki64
-#else
-#    define ftell_x ftell
-#    define fseek_x fseek
-#endif
-
 template <class C>
 std::vector<std::basic_string<C>>
 split(const std::basic_string<C>& s, const std::string& delim = " ", unsigned limit = 0)

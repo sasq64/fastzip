@@ -31,11 +31,7 @@ public:
     Entry& getEntry(int i) { return entries[i]; }
     const Entry& getEntry(int i) const { return entries[i]; }
 
-    template <typename T> T read() { return f.Read<T>(); }
-
     File dupFile() const { return File(zipName, File::Mode::READ); }
-
-    FILE* copyFP() const { return fopen(zipName.c_str(), "rb"); }
 
 private:
     std::string zipName;
