@@ -4,8 +4,8 @@ project(fastzip)
 enable_language(ASM_NASM)
 set(CMAKE_ASM_NASM_COMPILER yasm)
 
-set(CMAKE_CXX_FLAGS_RELEASE "${CMAKE_CXX_FLAGS} -g -O2")
-set(CMAKE_C_FLAGS_RELEASE "${CMAKE_C_FLAGS} -g -O2")
+set(CMAKE_CXX_FLAGS_RELEASE "${CMAKE_CXX_FLAGS} -g -O3 -fomit-frame-pointer")
+set(CMAKE_C_FLAGS_RELEASE "${CMAKE_C_FLAGS} -g -O3 -fomit-frame-pointer")
 
 set(CMAKE_CXX_FLAGS_DEBUG "${CMAKE_CXX_FLAGS} -g -O0")
 set(CMAKE_C_FLAGS_DEBUG "${CMAKE_C_FLAGS} -g -O0")

@@ -6,7 +6,8 @@ by _Jonas Minnberg_ (jonasmi@unity3d.com)
 * On-the-fly Jar signing
 * Flexible command line operation
 * Created with the goal of fast APK creation
-* Around 4-5x faster than zip on a modern SSD
+* Around 6x faster than zip on a modern SSD
+* Around 1.3-1.4x faster than parallell 7z zip
 * At least 10x faster at creating APKs than Googles tools
 * Check _LICENCE.md_ for license information
 
@@ -14,19 +15,11 @@ by _Jonas Minnberg_ (jonasmi@unity3d.com)
 
 Check *Releases*
 
-## Build (Unix/OSX)
+## Build
 
 * Make sure you have *yasm* and *openssl* installed. (`apt-get install yasm libssl-dev`)
-* `make`
-* `WITH_INTEL=0 make` - Build without Intel code.
-* `./test.py` - Simple functional test
-
-## Build (Windows)
-
-* Make sure you have a working MingW compiler setup. [STLs Mingw distro](http://nuwen.net/mingw.html) should
-  work out of the box.
-* Build from _CMD.EXE_, If you have _sh.exe_ in your path it will not work.
-* `make`
+* Make sure you build with the latest compiler (clang6+, Visual Studio 2017 15.7+)
+* cmake -DCMAKE_BUILD_TYPE=Release ; make -j8
 
 ## Usage
 
@@ -39,19 +32,20 @@ Check *Releases*
 
 ## Speed Tests
 
-### Simple Commandline Test
+### Simple command line test
 
+* Compressing the Android NDK folder, 56558 files, 2311874424 bytes (2205 MiB)
 
-    ~ time fastzip android-ndk-r10e
-    fastzip android-ndk-r10e  140.39s user 4.87s system 739% cpu 19.647 total
+* zip -4 -r -q ndk_zip4.zip sdk/android-ndk-r13b  45.90s user 6.35s system 78% cpu 1:06.52 total (706MB)
+* fastzip -j -4 ndk_fs4.zip sdk/android-ndk-r13b  51.40s user 4.45s system 626% cpu 8.915 total (701MB)
+* 7z a -mx=3 ndk_7z3.zip sdk/android-ndk-r13b  72.32s user 3.41s system 603% cpu 12.553 total (699MB)
+* fastzip -j -I ndk_i.zip sdk/android-ndk-r13b  13.69s user 5.23s system 423% cpu 4.468 total (893MB)
 
-    ~ time zip -5 -r -q ndk.zip android-ndk-r10e
-    zip -5 -r -q ndk.zip android-ndk-r10e  88.72s user 1.89s system 98% cpu 1:31.82 total
+A directory of 98 MP3 files at 925MB
 
-    ~ ls -l *.zip
-    -rw-r--r--    1 sasq  staff  1105140127 Oct 26 10:46 android-ndk-r10e.zip
-    -rw-r--r--    1 sasq  staff  1108973881 Oct 26 10:48 ndk.zip
-
+* fastzip -j -4 ss4_fs.zip   34.91s user 1.07s system 725% cpu 4.959 total (922MB)
+* 7z a -mx=3 ss4_7z.zip   45.45s user 0.80s system 699% cpu 6.615 total (924MB)
+*
 ### Unity Test (Unity Teleporter Demo)
 
 Export APK from Unity. Timed from Progress Dialog open until it closes. Resulting APK ~300MB
