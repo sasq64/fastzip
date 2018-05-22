@@ -1,21 +1,21 @@
-#ifndef FASTZIP_H
-#define FASTZIP_H
+#pragma once
 
 #include "crypto.h"
 #include "utils.h"
 
 #include <cstdint>
-#include <vector>
 #include <functional>
+#include <vector>
 
 class fastzip_exception : public std::exception
 {
 public:
-    fastzip_exception(const std::exception &e) : msg(e.what()) {}
-    fastzip_exception(const char *ptr = "Fastzip Exception") : msg(ptr) {}
-    virtual const char *what() const throw () { return msg; }
+    fastzip_exception(const std::exception& e) : msg(e.what()) {}
+    fastzip_exception(const char* ptr = "Fastzip Exception") : msg(ptr) {}
+    virtual const char* what() const throw() { return msg; }
+
 private:
-    const char *msg;
+    const char* msg;
 };
 
 enum
@@ -43,11 +43,10 @@ enum PackFormat
 
 struct FileTarget
 {
-    FileTarget(const std::string &source = "", const std::string &target = "",
+    FileTarget(const std::string& source = "", const std::string& target = "",
                PackFormat pf = INTEL_COMPRESSED)
         : source(source), target(target), packFormat(pf)
-    {
-    }
+    {}
 
     std::string source;
     std::string target;
@@ -55,9 +54,9 @@ struct FileTarget
     uint64_t size = 0;
     PackFormat packFormat;
 
-    bool operator==(const FileTarget &other) const { return other.target == target; }
+    bool operator==(const FileTarget& other) const { return other.target == target; }
 
-    bool operator<(const FileTarget &other) const { return other.target < target; }
+    bool operator<(const FileTarget& other) const { return other.target < target; }
 };
 
 struct ZipEntry;
@@ -80,7 +79,7 @@ public:
     std::string keyName;
     int threadCount = 1;
     int earlyOut = 98;
-	bool force64 = false;
+    bool force64 = false;
 
     // Add a file to be packed into the target zip
     void addZip(std::string zipName, PackFormat format);
@@ -93,13 +92,12 @@ public:
     void setOuputFunction(std::function<void(const std::string)> f) { warning = f; }
 
 private:
-    std::function<void(const std::string)> warning = [&](const std::string &text)
-        {
-            fprintf(stderr, "**Warn: %s\n", text.c_str());
-        };
+    std::function<void(const std::string)> warning = [&](const std::string& text) {
+        fprintf(stderr, "**Warn: %s\n", text.c_str());
+    };
 
-    void packZipData(File& f, int size, PackFormat inFormat, PackFormat outFormat, uint8_t *sha,
-        ZipEntry &target);
+    void packZipData(File& f, int size, PackFormat inFormat, PackFormat outFormat,
+                     uint8_t* sha, ZipEntry& target);
 
     UniQueue<FileTarget> fileNames;
     int strLen = 0;
@@ -107,4 +105,3 @@ private:
     KeyStore keyStore;
 };
 
-#endif // FASTZIP_H

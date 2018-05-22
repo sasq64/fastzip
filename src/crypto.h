@@ -1,5 +1,4 @@
-#ifndef CRYPTO_H
-#define CRYPTO_H
+#pragma once
 
 #include "asn.h"
 
@@ -55,4 +54,3 @@ private:
 	std::string currentKeyPass;
 };
 
-#endif // CRYPTO_H

@@ -1,23 +1,24 @@
 #include "sign.h"
-#include "ziparchive.h"
-#include "crypto.h"
 #include "asn.h"
+#include "crypto.h"
+#include "ziparchive.h"
 
 #include <openssl/conf.h>
-#include <openssl/evp.h>
 #include <openssl/err.h>
+#include <openssl/evp.h>
 #include <openssl/pem.h>
 
 const static int SHA_LEN = 20;
-uint32_t crc32_fast(const void *data, size_t length, uint32_t previousCrc32 = 0);
+uint32_t crc32_fast(const void* data, size_t length, uint32_t previousCrc32 = 0);
 
 using namespace std;
 using namespace asn1;
 
-void sign(ZipArchive &zipArchive, KeyStore &keyStore, const string &digestFile)
+void sign(ZipArchive& zipArchive, KeyStore& keyStore, const string& digestFile)
 {
     SHA_CTX context;
-    string head = "Manifest-Version: 1.0\015\012Created-By: 1.0 (Fastzip)\015\012\015\012";
+    string head =
+        "Manifest-Version: 1.0\015\012Created-By: 1.0 (Fastzip)\015\012\015\012";
 
     string manifestMF = head + digestFile;
     uint8_t manifestSha[SHA_LEN];
@@ -26,8 +27,8 @@ void sign(ZipArchive &zipArchive, KeyStore &keyStore, const string &digestFile)
     SHA1_Final(manifestSha, &context);
 
     uint32_t checksum = crc32_fast(manifestMF.c_str(), manifestMF.length());
-    zipArchive.addFile("META-INF/MANIFEST.MF", true, manifestMF.length(), manifestMF.length(), 0,
-        checksum);
+    zipArchive.addFile("META-INF/MANIFEST.MF", true, manifestMF.length(),
+                       manifestMF.length(), 0, checksum);
     zipArchive.write((uint8_t*)manifestMF.c_str(), manifestMF.length());
 
     unsigned char sha[SHA_LEN];
@@ -35,20 +36,17 @@ void sign(ZipArchive &zipArchive, KeyStore &keyStore, const string &digestFile)
     vector<char> digestCopy(digestFile.length() + 1);
     strcpy(&digestCopy[0], digestFile.c_str());
 
-    char *digestPtr = &digestCopy[0];
-    while (true)
-    {
-        char *ptr = digestPtr;
+    char* digestPtr = &digestCopy[0];
+    while (true) {
+        char* ptr = digestPtr;
 
-        while (*ptr)
-        {
+        while (*ptr) {
             if (ptr[0] == 0x0d && ptr[1] == 0xa && ptr[2] == 0x0d && ptr[3] == 0x0a)
                 break;
             ptr++;
         }
 
-        if (!*ptr)
-            break;
+        if (!*ptr) break;
 
         ptr += 4;
 
@@ -59,14 +57,15 @@ void sign(ZipArchive &zipArchive, KeyStore &keyStore, const string &digestFile)
 
         digestPtr = ptr;
     }
-    const string sigHead =
-        "Signature-Version: 1.0\015\012Created-By: 1.0 (Fastzip)\015\012SHA1-Digest-Manifest: ";
+    const string sigHead = "Signature-Version: 1.0\015\012Created-By: 1.0 "
+                           "(Fastzip)\015\012SHA1-Digest-Manifest: ";
 
-    string certSF =
-        sigHead + base64_encode(manifestSha, SHA_LEN) + "\015\012\015\012" + string(&digestCopy[0]);
+    string certSF = sigHead + base64_encode(manifestSha, SHA_LEN) + "\015\012\015\012" +
+                    string(&digestCopy[0]);
 
     checksum = crc32_fast(certSF.c_str(), certSF.length());
-    zipArchive.addFile("META-INF/CERT.SF", true, certSF.length(), certSF.length(), 0, checksum);
+    zipArchive.addFile("META-INF/CERT.SF", true, certSF.length(), certSF.length(), 0,
+                       checksum);
     zipArchive.write((uint8_t*)certSF.c_str(), certSF.length());
 
     unsigned char digest[SHA_LEN];
@@ -77,20 +76,16 @@ void sign(ZipArchive &zipArchive, KeyStore &keyStore, const string &digestFile)
     SHA1_Final(digest, &context);
 
     vector<uint8_t> key;
-    try
-    {
+    try {
         key = keyStore.getKey();
-    }
-    catch (key_exception &ke)
-    {
+    } catch (key_exception& ke) {
         throw sign_exception(ke);
     }
 
     string pemKey = toPem(key);
-    BIO *bio = BIO_new_mem_buf((void*)pemKey.c_str(), -1);
-    RSA *rsa = PEM_read_bio_RSAPrivateKey(bio, NULL, NULL, NULL);
-    if (rsa == nullptr)
-        throw sign_exception("Could not read valid RSA key");
+    BIO* bio = BIO_new_mem_buf((void*)pemKey.c_str(), -1);
+    RSA* rsa = PEM_read_bio_RSAPrivateKey(bio, NULL, NULL, NULL);
+    if (rsa == nullptr) throw sign_exception("Could not read valid RSA key");
 
     vector<uint8_t> certificate = keyStore.getCert(0);
 
@@ -99,14 +94,11 @@ void sign(ZipArchive &zipArchive, KeyStore &keyStore, const string &digestFile)
 
     vector<uint8_t> certMetaData;
     uint32_t timeStamp = 0;
-    for (int i = 0; i < certData[0].size(); i++)
-    {
-        if (certData[0][i].tag == 0x02 && timeStamp == 0)
-        {
+    for (int i = 0; i < certData[0].size(); i++) {
+        if (certData[0][i].tag == 0x02 && timeStamp == 0) {
             timeStamp = certData[0][i].value;
         }
-        if (certData[0][i].tag == 0x30 && certData[0][i][0].tag == 0x31)
-        {
+        if (certData[0][i].tag == 0x30 && certData[0][i][0].tag == 0x31) {
             certMetaData = certData[0][i].data;
             break;
         }
@@ -121,7 +113,7 @@ void sign(ZipArchive &zipArchive, KeyStore &keyStore, const string &digestFile)
     RSA_sign(NID_sha1, digest, SHA_LEN, &sign[0], &signLen, rsa);
 
     sign.resize(signLen);
-
+    // clang-format off
     auto data =
         mkSEQ(0x30,
             // PKCS7 SIGNED
@@ -164,9 +156,8 @@ void sign(ZipArchive &zipArchive, KeyStore &keyStore, const string &digestFile)
                     )
                 )
             );
-
+	// clang-format off
     checksum = crc32_fast(&data[0], data.size());
     zipArchive.addFile("META-INF/CERT.RSA", true, data.size(), data.size(), 0, checksum);
     zipArchive.write(&data[0], data.size());
 }
-

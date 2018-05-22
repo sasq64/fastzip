@@ -1,97 +1,103 @@
 #include "utils.h"
 
-#include <experimental/filesystem>
 #include <ctime>
+#include <experimental/filesystem>
 
 #ifdef _WIN32
-#include <direct.h>
+#    include <direct.h>
 #endif
 
 namespace fs = std::experimental::filesystem;
 
-void makedir(const std::string &name) {
-	fs::create_directory(name);
+void makedir(const std::string& name)
+{
+    fs::create_directory(name);
 }
 
-void makedirs(const std::string &path) {
-	fs::create_directories(path);
-	/* int start = 0; */
-	/* while(true) { */
-	/* 	auto pos = path.find_first_of("/\\", start); */
-	/* 	if(pos != std::string::npos) { */
-	/* 		makedir(path.substr(0, pos)); */
-	/* 		start = pos+1; */
-        /* } else { */
-            /* makedir(path); */
-	/* 		break; */
-        /* } */
-	/* } */
+void makedirs(const std::string& path)
+{
+    fs::create_directories(path);
+    /* int start = 0; */
+    /* while(true) { */
+    /* 	auto pos = path.find_first_of("/\\", start); */
+    /* 	if(pos != std::string::npos) { */
+    /* 		makedir(path.substr(0, pos)); */
+    /* 		start = pos+1; */
+    /* } else { */
+    /* makedir(path); */
+    /* 		break; */
+    /* } */
+    /* } */
 }
 
-std::string path_basename(const std::string &name) {
+std::string path_basename(const std::string& name)
+{
 
-	return fs::path(name).stem();
+    return fs::path(name).stem();
 
-	/* auto slashPos = name.rfind('/'); */
-	/* if(slashPos == std::string::npos) */
-	/* 	slashPos = 0; */
-	/* else */
-	/* 	slashPos++; */
-	/* auto dotPos = name.rfind('.'); */
-	/* if(dotPos == std::string::npos || dotPos < slashPos) */
-	/* 	return name.substr(slashPos); */
-	/* return name.substr(slashPos, dotPos-slashPos); */
+    /* auto slashPos = name.rfind('/'); */
+    /* if(slashPos == std::string::npos) */
+    /* 	slashPos = 0; */
+    /* else */
+    /* 	slashPos++; */
+    /* auto dotPos = name.rfind('.'); */
+    /* if(dotPos == std::string::npos || dotPos < slashPos) */
+    /* 	return name.substr(slashPos); */
+    /* return name.substr(slashPos, dotPos-slashPos); */
 }
 
-std::string path_directory(const std::string &name) {
-	return fs::path(name).parent_path();
-	/* auto slashPos = name.rfind('/'); */
-	/* if(slashPos == std::string::npos) */
-	/* 	slashPos = 0; */
-	/* return name.substr(0, slashPos); */
+std::string path_directory(const std::string& name)
+{
+    return fs::path(name).parent_path();
+    /* auto slashPos = name.rfind('/'); */
+    /* if(slashPos == std::string::npos) */
+    /* 	slashPos = 0; */
+    /* return name.substr(0, slashPos); */
 }
 
-std::string path_filename(const std::string &name) {
-	return fs::path(name).filename();
-	/* auto slashPos = name.rfind('/'); */
-	/* if(slashPos == std::string::npos) */
-	/* 	slashPos = 0; */
-	/* else */
-	/* 	slashPos++; */
-	/* return name.substr(slashPos); */
+std::string path_filename(const std::string& name)
+{
+    return fs::path(name).filename();
+    /* auto slashPos = name.rfind('/'); */
+    /* if(slashPos == std::string::npos) */
+    /* 	slashPos = 0; */
+    /* else */
+    /* 	slashPos++; */
+    /* return name.substr(slashPos); */
 }
 
-bool startsWith(const std::string &name, const std::string &pref) {
-	auto pos = name.find(pref);
-	return (pos == 0);
+bool startsWith(const std::string& name, const std::string& pref)
+{
+    auto pos = name.find(pref);
+    return (pos == 0);
 }
 
-
-bool fileExists(const std::string &name)
+bool fileExists(const std::string& name)
 {
     struct stat ss;
     return stat(name.c_str(), &ss) == 0;
 }
 
-void _listFiles(char *dirName, const std::function<void(const std::string &path)>& f)
+void _listFiles(char* dirName, const std::function<void(const std::string& path)>& f)
 {
-	for (const auto& p : fs::directory_iterator(dirName)) {
-		auto path = p.path().string();
-		if (path[0] == '.' && (path[1] == 0 || (path[1] == '.' && path[2] == 0)))
-			continue;
-		if (fs::is_directory(p.status()))
-			listFiles(path, f);
-		else
-			f(path);
-	}
+    for (const auto& p : fs::directory_iterator(dirName)) {
+        auto path = p.path().string();
+        if (path[0] == '.' && (path[1] == 0 || (path[1] == '.' && path[2] == 0)))
+            continue;
+        if (fs::is_directory(p.status()))
+            listFiles(path, f);
+        else
+            f(path);
+    }
 }
 
-void listFiles(const std::string &dirName, const std::function<void(const std::string &path)>& f)
+void listFiles(const std::string& dirName,
+               const std::function<void(const std::string& path)>& f)
 {
-	if(!fs::is_directory(dirName)) {
-		f(dirName);
-		return;
-	}
+    if (!fs::is_directory(dirName)) {
+        f(dirName);
+        return;
+    }
     char path[16384];
     strcpy(path, dirName.c_str());
     _listFiles(path, f);
@@ -112,18 +118,18 @@ time_t msdosToUnixTime(uint32_t m)
 
 fs::file_time_type msdosToFileTime(uint32_t m)
 {
-	return fs::file_time_type::clock::from_time_t(msdosToUnixTime(m));
+    return fs::file_time_type::clock::from_time_t(msdosToUnixTime(m));
 }
 
-void removeFiles(char *dirName)
+void removeFiles(char* dirName)
 {
-	std::error_code ec;
-	fs::remove_all(dirName, ec);
+    std::error_code ec;
+    fs::remove_all(dirName, ec);
 }
 
-void removeFiles(const std::string &dirName)
+void removeFiles(const std::string& dirName)
 {
-	char d[16384];
-	strcpy(d, dirName.c_str());
-	removeFiles(d);
+    char d[16384];
+    strcpy(d, dirName.c_str());
+    removeFiles(d);
 }

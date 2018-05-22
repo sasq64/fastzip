@@ -4,23 +4,23 @@
 
 #include "CLI11.hpp"
 
+#include <cctype>
 #include <cstdio>
 #include <cstdlib>
-#include <cctype>
 
 #include <string>
-#include <vector>
 #include <thread>
+#include <vector>
 
 #ifdef _WIN32
-#include <io.h>
+#    include <io.h>
 #else
-#include <unistd.h>
+#    include <unistd.h>
 #endif
 
 const std::string helpText =
     R"(
-Fastzip v1.2 by Jonas Minnberg
+Fastzip v1.1 by Jonas Minnberg
 (c) 2015-2018 Unity Technologies
 
 Usage: fastzip [options] <zipfile> <paths...>
@@ -77,209 +77,193 @@ static const std::vector<std::string> androidNopackExt = {
 
 static void error(const std::string& msg)
 {
-	printf("\n**Error: %s\n", msg.c_str());
-	fflush(stdout);
-	exit(1);
+    printf("\n**Error: %s\n", msg.c_str());
+    fflush(stdout);
+    exit(1);
 }
 
 static void warning(const std::string& msg)
 {
-	printf("\n**Warning: %s\n", msg.c_str());
-	fflush(stdout);
+    printf("\n**Warning: %s\n", msg.c_str());
+    fflush(stdout);
 }
 
 int main(int argc, char** argv)
 {
-	if (argc < 2) {
-		puts(helpText.c_str());
-		return 0;
-	}
+    if (argc < 2) {
+        puts(helpText.c_str());
+        return 0;
+    }
 
-	Fastzip fs;
+    Fastzip fs;
 
-	int packLevel = 5;
-	int packMode = INFOZIP;
-	bool noFiles = true;
-	std::string destDir;
-	bool extractMode = false;
-	bool listFiles = false;
+    int packLevel = 5;
+    int packMode = INFOZIP;
+    bool noFiles = true;
+    std::string destDir;
+    bool extractMode = false;
+    bool listFiles = false;
 
-	fs.threadCount = std::thread::hardware_concurrency();
+    fs.threadCount = std::thread::hardware_concurrency();
 
 #ifdef _WIN32
-	std::string HOME = getenv("USERPROFILE");
+    std::string HOME = getenv("USERPROFILE");
 #else
-	std::string HOME = getenv("HOME");
+    std::string HOME = getenv("HOME");
 #endif
 
-	int i = 1;
-	/* if (strcmp(argv[1], "x") == 0 && !fileExists("x")) { */
-	/* 	extractMode = true; */
-	/* 	i++; */
-	/* } */
+    for (int i = 1; i < argc; i++) {
+        if (argv[i][0] == '-') {
+            std::string name;
+            std::vector<std::string> parts;
+            std::vector<std::string> args;
+            char opt = 0;
 
-	for (; i < argc; i++) {
-		if (argv[i][0] == '-') {
-			std::string name;
-			std::vector<std::string> parts;
-			std::vector<std::string> args;
-			char opt = 0;
+            // Parse option
+            if (argv[i][1] == '-') {
+                parts = split(&argv[i][2], "=");
+                name = parts[0];
+                if (parts.size() > 1) args = split(parts[1], ",");
+            } else {
+                opt = argv[i][1];
+                if (argv[i][2]) args = split(&argv[i][2], ",");
+            }
 
-			// Parse option
-			if (argv[i][1] == '-') {
-				parts = split(&argv[i][2], "=");
-				name = parts[0];
-				if (parts.size() > 1)
-					args = split(parts[1], ",");
-			} else {
-				opt = argv[i][1];
-				if (argv[i][2])
-					args = split(&argv[i][2], ",");
-			}
-
-			// Handle option
-			if (isdigit(opt)) {
-				packLevel = opt - '0';
-				if (packLevel > 0)
-					packMode = INFOZIP;
-			} else if (opt == 'z' || name == "zip")
-				packMode = INFOZIP;
+            // Handle option
+            if (isdigit(opt)) {
+                packLevel = opt - '0';
+                if (packLevel > 0) packMode = INFOZIP;
+            } else if (opt == 'z' || name == "zip")
+                packMode = INFOZIP;
 #ifdef WITH_INTEL
-			else if (opt == 'I' || name == "intel")
-				packMode = INTEL_FAST;
+            else if (opt == 'I' || name == "intel")
+                packMode = INTEL_FAST;
 #endif
-			else if (opt == 'l') {
-				listFiles = true;
-				extractMode = true;
-			} else if (name == "apk") {
-				fs.storeExts = androidNopackExt;
-				fs.doSign = true;
-				fs.zipAlign = true;
-				fs.keystoreName = HOME + "/.android/debug.keystore";
-				fs.keyPassword = "android";
-			} else if (name == "early-out" || opt == 'e') {
-				fs.earlyOut = 98;
-				if (args.size() == 1) {
-					fs.earlyOut = atoi(args[0].c_str());
-				}
-			} else if (name == "junk-paths" || opt == 'j') {
-				fs.junkPaths = true;
-			} else if (name == "add-zip" || opt == 'Z') {
-				std::string zipName = argv[++i];
-				if (fileExists(zipName)) {
-					PackFormat packFormat =
-					    (packLevel == 0 || packMode == INFOZIP ? (PackFormat)packLevel
-					                                           : INTEL_COMPRESSED);
-					fs.addZip(zipName, packFormat);
-				} else
-					warning(std::string("File not found: ") + zipName);
-			} else if (name == "store-ext" || opt == 'X') {
-				fs.storeExts = args;
-			} else if (name == "align" || opt == 'A') {
-				fs.zipAlign = true;
-			} else if (name == "seq" || opt == 's') {
-				fs.doSeq = true;
-			} else if (name == "sign" || opt == 'S') {
-				fs.keyPassword = "fastzip";
-				if (args.size() > 0)
-					fs.keystoreName = args[0];
-				if (args.size() > 1)
-					fs.keyPassword = args[1];
-				if (args.size() > 2)
-					fs.keyName = args[2];
-				fs.doSign = true;
-			} else if (name == "verbose" || opt == 'v')
-				fs.verbose = true;
-			else if (name == "threads" || opt == 't') {
-				if (args.size() != 1)
-					error("'threads' needs exactly one argument");
-				fs.threadCount = atoi(args[0].c_str());
-			} else if (opt == 'x') {
-				extractMode = true;
-			} else if (name == "destination" || opt == 'd') {
-				destDir = argv[++i];
-			} else if (name == "zip64") {
-				fs.force64 = true;
-			} else if (name == "help" || opt == 'h') {
-				// Do nothing here
-			} else
-				error("Unknown option");
-		} else {
-			if (fs.zipfile == "")
-				fs.zipfile = argv[i];
-			else {
-				PackFormat packFormat =
-				    (packLevel == 0 || packMode == INFOZIP ? (PackFormat)packLevel
-				                                           : INTEL_COMPRESSED);
-				fs.addDir(argv[i], packFormat);
-				noFiles = false;
-			}
-		}
-	}
+            else if (opt == 'l') {
+                listFiles = true;
+                extractMode = true;
+            } else if (name == "apk") {
+                fs.storeExts = androidNopackExt;
+                fs.doSign = true;
+                fs.zipAlign = true;
+                fs.keystoreName = HOME + "/.android/debug.keystore";
+                fs.keyPassword = "android";
+            } else if (name == "early-out" || opt == 'e') {
+                fs.earlyOut = 98;
+                if (args.size() == 1) {
+                    fs.earlyOut = atoi(args[0].c_str());
+                }
+            } else if (name == "junk-paths" || opt == 'j') {
+                fs.junkPaths = true;
+            } else if (name == "add-zip" || opt == 'Z') {
+                std::string zipName = argv[++i];
+                if (fileExists(zipName)) {
+                    PackFormat packFormat =
+                        (packLevel == 0 || packMode == INFOZIP ? (PackFormat)packLevel
+                                                               : INTEL_COMPRESSED);
+                    fs.addZip(zipName, packFormat);
+                } else
+                    warning(std::string("File not found: ") + zipName);
+            } else if (name == "store-ext" || opt == 'X') {
+                fs.storeExts = args;
+            } else if (name == "align" || opt == 'A') {
+                fs.zipAlign = true;
+            } else if (name == "seq" || opt == 's') {
+                fs.doSeq = true;
+            } else if (name == "sign" || opt == 'S') {
+                fs.keyPassword = "fastzip";
+                if (args.size() > 0) fs.keystoreName = args[0];
+                if (args.size() > 1) fs.keyPassword = args[1];
+                if (args.size() > 2) fs.keyName = args[2];
+                fs.doSign = true;
+            } else if (name == "verbose" || opt == 'v')
+                fs.verbose = true;
+            else if (name == "threads" || opt == 't') {
+                if (args.size() != 1) error("'threads' needs exactly one argument");
+                fs.threadCount = atoi(args[0].c_str());
+            } else if (opt == 'x') {
+                extractMode = true;
+            } else if (name == "destination" || opt == 'd') {
+                destDir = argv[++i];
+            } else if (name == "zip64") {
+                fs.force64 = true;
+            } else if (name == "help" || opt == 'h') {
+                // Do nothing here
+            } else
+                error("Unknown option");
+        } else {
+            if (fs.zipfile == "")
+                fs.zipfile = argv[i];
+            else {
+                PackFormat packFormat =
+                    (packLevel == 0 || packMode == INFOZIP ? (PackFormat)packLevel
+                                                           : INTEL_COMPRESSED);
+                fs.addDir(argv[i], packFormat);
+                noFiles = false;
+            }
+        }
+    }
 
-	if (!isatty(fileno(stdin))) {
-		char line[1024];
-		while (true) {
-			if (!fgets(line, sizeof(line), stdin))
-				break;
-			auto e = strlen(line) - 1;
-			while (line[e] == 10 || line[e] == 13)
-				line[e--] = 0;
-			PackFormat packFormat =
-			    (packLevel == 0 || packMode == INFOZIP ? (PackFormat)packLevel
-			                                           : INTEL_COMPRESSED);
-			fs.addDir(line, packFormat);
-			noFiles = false;
-		}
-	}
+    if (!isatty(fileno(stdin))) {
+        char line[1024];
+        while (true) {
+            if (!fgets(line, sizeof(line), stdin)) break;
+            auto e = strlen(line) - 1;
+            while (line[e] == 10 || line[e] == 13)
+                line[e--] = 0;
+            PackFormat packFormat =
+                (packLevel == 0 || packMode == INFOZIP ? (PackFormat)packLevel
+                                                       : INTEL_COMPRESSED);
+            fs.addDir(line, packFormat);
+            noFiles = false;
+        }
+    }
 
-	// If only a directory is given, pack that to a zip
-	struct stat ss;
-	if (noFiles && stat(fs.zipfile.c_str(), &ss) == 0) {
-		std::string ext;
-		auto dot = fs.zipfile.find_last_of(".");
-		if (dot != std::string::npos)
-			ext = fs.zipfile.substr(dot + 1);
-		if (ext == "zip" || ext == "ZIP") {
-			extractMode = true;
-		} else {
-			fs.junkPaths = true;
-			PackFormat packFormat =
-			    (packLevel == 0 || packMode == INFOZIP ? (PackFormat)packLevel
-			                                           : INTEL_COMPRESSED);
-			fs.addDir(fs.zipfile, packFormat);
-			auto last = fs.zipfile.find_last_of("\\/");
-			if (last != std::string::npos)
-				fs.zipfile = fs.zipfile.substr(last + 1);
-			fs.zipfile = fs.zipfile + ".zip";
-		}
-	}
+    // If only a directory is given, pack that to a zip
+    struct stat ss;
+    if (noFiles && stat(fs.zipfile.c_str(), &ss) == 0) {
+        std::string ext;
+        auto dot = fs.zipfile.find_last_of(".");
+        if (dot != std::string::npos) ext = fs.zipfile.substr(dot + 1);
+        if (ext == "zip" || ext == "ZIP") {
+            extractMode = true;
+        } else {
+            fs.junkPaths = true;
+            PackFormat packFormat =
+                (packLevel == 0 || packMode == INFOZIP ? (PackFormat)packLevel
+                                                       : INTEL_COMPRESSED);
+            fs.addDir(fs.zipfile, packFormat);
+            auto last = fs.zipfile.find_last_of("\\/");
+            if (last != std::string::npos) fs.zipfile = fs.zipfile.substr(last + 1);
+            fs.zipfile = fs.zipfile + ".zip";
+        }
+    }
 
-	if (fs.zipfile == "") {
-		puts(helpText.c_str());
-		return 0;
-	}
+    if (fs.zipfile == "") {
+        puts(helpText.c_str());
+        return 0;
+    }
 
-	if (extractMode) {
-		FUnzip fuz;
-		fuz.zipName = fs.zipfile;
-		fuz.threadCount = fs.threadCount;
-		fuz.verbose = fs.verbose;
-		fuz.listFiles = listFiles;
-		fuz.destinationDir = destDir;
-		try {
-			fuz.exec();
-		} catch (funzip_exception& e) {
-			error(e.what());
-		}
-		return 0;
-	}
+    if (extractMode) {
+        FUnzip fuz;
+        fuz.zipName = fs.zipfile;
+        fuz.threadCount = fs.threadCount;
+        fuz.verbose = fs.verbose;
+        fuz.listFiles = listFiles;
+        fuz.destinationDir = destDir;
+        try {
+            fuz.exec();
+        } catch (funzip_exception& e) {
+            error(e.what());
+        }
+        return 0;
+    }
 
-	try {
-		fs.exec();
-	} catch (fastzip_exception& e) {
-		error(e.what());
-	}
+    try {
+        fs.exec();
+    } catch (fastzip_exception& e) {
+        error(e.what());
+    }
 
-	return 0;
+    return 0;
 }
