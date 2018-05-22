@@ -7,7 +7,7 @@ by _Jonas Minnberg_ (jonasmi@unity3d.com)
 * Flexible command line operation
 * Created with the goal of fast APK creation
 * Around 6x faster than zip on a modern SSD
-* Around 1.3-1.4x faster than parallell 7z zip
+* Around 1.4x faster than parallell 7z zip
 * At least 10x faster at creating APKs than Googles tools (outdated)
 * Check _LICENCE.md_ for license information
 
@@ -19,12 +19,12 @@ Check *Releases*
 
 * Make sure you have *yasm* and *openssl* installed. (`apt-get install yasm libssl-dev`)
 * Make sure you build with the latest compiler (clang6+, Visual Studio 2017 15.7+)
-* cmake -DCMAKE_BUILD_TYPE=Release ; make -j8
+* `cmake -DCMAKE_BUILD_TYPE=Release ; make -j8`
 
 ## Usage
 
-    fastzip <directory>
-    fastzip <file.zip> <paths>...
+	fastzip <directory>
+	fastzip <file.zip> <paths>...
 
 	fastzip -x <file.zip>
 
@@ -45,7 +45,12 @@ A directory of 98 MP3 files at 925MB
 
 * `fastzip -j -4 ss4_fs.zip   34.91s user 1.07s system 725% cpu 4.959 total (922MB)`
 * `7z a -mx=3 ss4_7z.zip   45.45s user 0.80s system 699% cpu 6.615 total (924MB)`
-*
+
+My `projects` directory ~20000 files, 1175MB
+
+* `fastzip -j -4 proj_fs.zip projects  26.62s user 1.57s system 528% cpu 5.335 total` (501MB)
+* `7z a -mx=3 proj_7z.zip projects  36.57s user 1.48s system 442% cpu 8.604 total` (501MB)
+
 ### Unity Test (Unity Teleporter Demo)
 
 Export APK from Unity. Timed from Progress Dialog open until it closes. Resulting APK ~300MB
