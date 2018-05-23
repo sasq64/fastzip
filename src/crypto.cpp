@@ -11,11 +11,6 @@ static const std::string base64_chars = "ABCDEFGHIJKLMNOPQRSTUVWXYZ"
                                         "abcdefghijklmnopqrstuvwxyz"
                                         "0123456789+/";
 
-static inline bool is_base64(unsigned char c)
-{
-    return (isalnum(c) || (c == '+') || (c == '/'));
-}
-
 std::string base64_encode(unsigned char const* bytes_to_encode, unsigned int in_len)
 {
     std::string ret;
@@ -195,16 +190,16 @@ std::vector<uint8_t> KeyStore::getKey(const std::string& pass, const std::string
     for (unsigned i = 0; i < count; i++) {
         auto tag = membuf.read<uint32_t>();
         auto alias = membuf.readString();
-        auto timestamp = membuf.read<uint64_t>();
+        /* auto timestamp = */ membuf.read<uint64_t>();
 
         assert(tag == 1);
 
         auto length = membuf.read<uint32_t>();
         DER keyData = readDER(membuf.readBuffer(length).buffer());
         if (!foundKey && (name == "" || alias == name)) {
-            for (int i = 0; i < keyData.size(); i++) {
-                if (keyData[i].tag == 0x04) {
-                    privateKey = keyData[i].data;
+            for (const auto& kd : keyData) {
+                if (kd.tag == 0x04) {
+                    privateKey = kd.data;
                     foundKey = true;
                     break;
                 }
@@ -221,10 +216,13 @@ std::vector<uint8_t> KeyStore::getKey(const std::string& pass, const std::string
                 certificate = certBuf.buffer();
                 DER certData = readDER(certificate);
 
-                for (int i = 0; i < certData[0].size(); i++) {
-                    if (certData[0][i].tag == 0x30 && certData[0][i][0].tag == 0x31)
-                        break;
-                }
+                // TODO: This code didn't do anything, should probably break out
+                // of outer loop!
+                /* for (int i = 0; i < certData[0].size(); i++) { */
+                /*     if (certData[0][i].tag == 0x30 && certData[0][i][0].tag == 0x31) { */
+                /*         break; */
+                /*     } */
+                /* } */
             }
         }
         if (foundKey) break;
@@ -236,9 +234,9 @@ std::vector<uint8_t> KeyStore::getKey(const std::string& pass, const std::string
 
     DER keyData = readDER(plainKey);
 
-    for (int j = 0; j < keyData.size(); j++) {
-        if (keyData[j].tag == 0x04) {
-            return keyData[j].data;
+    for (const auto& kd : keyData) {
+        if (kd.tag == 0x04) {
+            return kd.data;
         }
     }
     throw key_exception("Could not recover key");

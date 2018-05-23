@@ -16,25 +16,30 @@ enum
     EMPTY = 1
 };
 
+std::string makeTemp(const std::string& prefix)
+{
+    std::string result(prefix.length() + 8, ' ');
+    for(unsigned i=0; i<= result.length(); i++) {
+        result[i] = i < prefix.length() ? prefix[i] : ('a' + (rand()%26));
+    }
+    return result;
+}
+
 std::vector<std::string> createFiles(const std::string& templ, int count, int maxSize,
                                      int minSize = 1, int flags = 0)
 {
     makedirs(path_directory(templ));
-    auto tx = templ + "XXXXXXXX";
-    char t[1024];
     std::vector<std::string> files(count);
     for (auto& f : files) {
-        strcpy(t, tx.c_str());
-        char* name = mktemp(t);
-        FILE* fp = fopen(name, "wb");
+        auto name = makeTemp(templ);
+        auto file = File {name};
         int sz = (rand() % (maxSize - minSize)) + minSize;
         uint8_t* data = new uint8_t[sz];
         if ((flags & EMPTY) == 0) {
             for (int i = 0; i < sz; i++)
                 data[i] = rand() % 0x100;
         }
-        fwrite(data, 1, sz, fp);
-        fclose(fp);
+        file.Write(data, sz);
         delete[] data;
     }
     return files;
@@ -42,19 +47,17 @@ std::vector<std::string> createFiles(const std::string& templ, int count, int ma
 
 bool compareFile(const std::string& a, const std::string& b)
 {
-    uint8_t temp0[65536];
-    uint8_t temp1[65536];
-    FILE* fp0 = fopen(a.c_str(), "rb");
-    FILE* fp1 = fopen(b.c_str(), "rb");
+    std::array<uint8_t, 65536> temp0;
+    std::array<uint8_t, 65536> temp1;
+    File fp0 = File {a};
+    File fp1 = File {b};
     while (true) {
-        int rc0 = fread(temp0, 1, sizeof(temp0), fp0);
-        int rc1 = fread(temp1, 1, sizeof(temp1), fp1);
+        int rc0 = fp0.Read(temp0);
+        int rc1 = fp1.Read(temp1);
         if (rc0 != rc1) return false;
-        if (memcmp(temp0, temp1, rc0) != 0) return false;
+        if (memcmp(&temp0[0], &temp1[0], rc0) != 0) return false;
         if (rc0 <= 0) break;
     }
-    fclose(fp0);
-    fclose(fp1);
     return true;
 }
 

@@ -6,12 +6,6 @@
 #include <sys/stat.h>
 #include <time.h>
 
-static inline void error(const std::string& msg)
-{
-    fprintf(stderr, "**Error: %s", (msg + "\n").c_str());
-    exit(1);
-}
-
 ZipStream::ZipStream(const std::string& zipName) : zipName(zipName), f{zipName}
 {
     uint32_t id = 0;
@@ -32,7 +26,7 @@ ZipStream::ZipStream(const std::string& zipName) : zipName(zipName), f{zipName}
     f.seek(4, SEEK_CUR);
     int64_t entryCount = f.Read<uint16_t>();
     f.seek(2, SEEK_CUR);
-    auto cdSize = f.Read<uint32_t>();
+    /* auto cdSize = */ f.Read<uint32_t>();
     int64_t cdOffset = f.Read<uint32_t>();
     auto commentLen = f.Read<uint16_t>();
     if (commentLen > 0) {

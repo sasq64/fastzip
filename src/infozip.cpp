@@ -93,7 +93,6 @@ int64_t iz_deflate(int level, char *tgt, char *src, ulg tgtsize, ulg srcsize)
 {
     ush att = (ush)UNKNOWN;
     ush flags = 0;
-    ulg crc;
     unsigned long out_total = 0;
     int method = DEFLATE;
 

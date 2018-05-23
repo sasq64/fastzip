@@ -46,7 +46,8 @@ static int store_compressed(File& f, int inSize, uint8_t* target, uint8_t* sha)
 
         mz_stream stream;
         memset(&stream, 0, sizeof(stream));
-        int rc = mz_inflateInit2(&stream, -MZ_DEFAULT_WINDOW_BITS);
+        if(mz_inflateInit2(&stream, -MZ_DEFAULT_WINDOW_BITS) != MZ_OK)
+            throw fastzip_exception("Could not init miniz for compression"); 
 
         stream.next_in = fileData;
         stream.avail_in = inSize;
@@ -167,8 +168,6 @@ static PackResult intel_deflate(File& f, size_t inSize, uint8_t* buffer, size_t*
 
     *outSize = *outSize - stream.avail_out;
 
-    int percent = (int)(*outSize * 100 / inSize);
-
     return RC_COMPRESSED;
 }
 
@@ -211,7 +210,6 @@ void Fastzip::packZipData(File& f, int size, PackFormat inFormat, PackFormat out
 {
     // Maximum size for deflate + space for buffer
     size_t outSize = size + (size / 16383 + 1) * 5 + 64 * 1024;
-    int bits = -1;
     uint8_t* outBuf = new uint8_t[outSize];
     // auto outBuf = std::make_unique<uint8_t[]>(outSize);
     target.store = false;
@@ -231,7 +229,6 @@ void Fastzip::packZipData(File& f, int size, PackFormat inFormat, PackFormat out
         if (outFormat >= ZIP1_COMPRESSED && outFormat <= ZIP9_COMPRESSED) {
             state =
                 infozip_deflate(outFormat, f, size, outBuf, &outSize, &target.crc, sha);
-            bits = outSize & 0x7;
             outSize = (outSize + 7) >> 3;
         }
 #ifdef WITH_INTEL

@@ -1,10 +1,15 @@
 cmake_minimum_required(VERSION 3.1)
 project(fastzip)
 
+set(WITH_INTEL 0 CACHE BOOL "Include Intel fast deflate support")
+
 if(WITH_INTEL)
 	enable_language(ASM_NASM)
 	set(CMAKE_ASM_NASM_COMPILER yasm)
 endif()
+
+
+set(CMAKE_CXX_FLAGS "-Wall -Wno-unused-function")
 
 if(MSVC)
 set(CMAKE_CXX_FLAGS_RELEASE "${CMAKE_CXX_FLAGS} /OX")
@@ -73,6 +78,7 @@ endif()
 
 add_executable(fastzip src/main.cpp ${SOURCE_FILES})
 target_include_directories(fastzip PRIVATE src/igzip src/openssl/include)
+target_compile_definitions(fastzip PRIVATE -DUNALIGNED_OK -DDEFL_UNDETERM)
 target_compile_options(fastzip PRIVATE ${STDFLAG})
 target_link_libraries(fastzip PRIVATE ${LIBS})
 

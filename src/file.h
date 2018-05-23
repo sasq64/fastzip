@@ -1,6 +1,7 @@
 #pragma once
 
 #include <string>
+#include <array>
 #include <stdexcept>
 
 class io_exception : public std::exception {
@@ -64,6 +65,12 @@ public:
     {
         open(READ);
         return fread(target, 1, bytes, fp);
+    }
+
+    template <typename T, size_t N>
+    size_t Read(std::array<T, N>& target)
+    {
+        return Read(&target[0], target.size() * sizeof(T));
     }
 
     template <typename T>

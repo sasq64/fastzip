@@ -120,6 +120,8 @@ struct DER
     uint64_t value;
     auto size() { return children.size(); }
     DER& operator[](const int& i) { return children[i]; }
+    auto begin() { return children.begin(); }
+    auto end() { return children.end(); }
 };
 
 void dumpDER(DER& root);

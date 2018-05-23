@@ -313,6 +313,7 @@ int IZDeflate::longest_match(IPos cur_match)
          * the 256th check will be made at strstart+258.
          */
         do {
+            // TODO: Vectorize?
         } while (*++scan == *++match && *++scan == *++match &&
                  *++scan == *++match && *++scan == *++match &&
                  *++scan == *++match && *++scan == *++match &&

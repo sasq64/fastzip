@@ -94,12 +94,12 @@ void sign(ZipArchive& zipArchive, KeyStore& keyStore, const string& digestFile)
 
     vector<uint8_t> certMetaData;
     uint32_t timeStamp = 0;
-    for (int i = 0; i < certData[0].size(); i++) {
-        if (certData[0][i].tag == 0x02 && timeStamp == 0) {
-            timeStamp = certData[0][i].value;
+    for (auto& cd : certData[0]) {
+        if (cd.tag == 0x02 && timeStamp == 0) {
+            timeStamp = cd.value;
         }
-        if (certData[0][i].tag == 0x30 && certData[0][i][0].tag == 0x31) {
-            certMetaData = certData[0][i].data;
+        if (cd.tag == 0x30 && cd[0].tag == 0x31) {
+            certMetaData = cd.data;
             break;
         }
     }
