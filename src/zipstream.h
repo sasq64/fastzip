@@ -23,6 +23,11 @@ public:
     std::vector<Entry> entries;
     char* comment = nullptr;
 
+    auto cbegin() const { return entries.cbegin(); }
+    auto cend() const { return entries.cend(); }
+    auto begin() { return entries.begin(); }
+    auto end() { return entries.end(); }
+
     ZipStream(const std::string& zipName);
     ~ZipStream();
     bool valid() const { return f.isOpen(); }

@@ -14,22 +14,20 @@
 #include <string>
 #include <vector>
 
+#include <sys/stat.h>
 #include <experimental/filesystem>
-#ifndef S_IFLNK
-static constexpr int S_IFLNK = 0120000;
-#endif
 
 namespace fs = std::experimental::filesystem;
 
 static bool copyfile(File& fout, int64_t size, File& fin)
 {
     if (!fout.canWrite()) return false;
-    uint8_t buf[65536 * 4];
+    std::array<uint8_t, 65536*4> buf;
     while (size > 0) {
-        int rc = fin.Read(buf, size < (int)sizeof(buf) ? size : sizeof(buf));
-        if (rc <= 0) return rc;
+        auto rc = fin.Read(&buf[0], size < buf.size() ? size : buf.size());
+        if (rc == 0) return rc;
         size -= rc;
-        fout.Write(buf, rc);
+        fout.Write(&buf[0], rc);
     }
     return true;
 }
@@ -37,14 +35,12 @@ static bool copyfile(File& fout, int64_t size, File& fin)
 static int64_t uncompress(File& fout, int64_t inSize, File& fin)
 {
     int64_t total = 0;
-    uint8_t buf[65536];
-    const int bufSize = sizeof(buf);
+    std::array<uint8_t, 65536> buf;
 
-    mz_stream stream;
-    memset(&stream, 0, sizeof(stream));
+    mz_stream stream {};
     mz_inflateInit2(&stream, -MZ_DEFAULT_WINDOW_BITS);
 
-    auto data = std::make_unique<uint8_t[]>(inSize > 0 ? inSize : bufSize);
+    auto data = std::make_unique<uint8_t[]>(inSize > 0 ? inSize : buf.size());
 
     if (inSize > 0) {
         fin.Read(&data[0], inSize);
@@ -55,17 +51,17 @@ static int64_t uncompress(File& fout, int64_t inSize, File& fin)
     while (rc == MZ_OK) {
         if (inSize == 0 && stream.avail_in == 0) {
             stream.next_in = &data[0];
-            stream.avail_in = fin.Read(&data[0], bufSize);
+            stream.avail_in = fin.Read(&data[0], buf.size());
             if (stream.avail_in == 0) break;
         }
-        stream.next_out = buf;
-        stream.avail_out = bufSize;
+        stream.next_out = &buf[0];
+        stream.avail_out = buf.size();
 
         rc = mz_inflate(&stream, MZ_SYNC_FLUSH);
         // Did we unpack anything?
-        if (stream.avail_out == bufSize) return -1;
-        fout.Write(buf, bufSize - stream.avail_out);
-        total += (bufSize - stream.avail_out);
+        if (stream.avail_out == buf.size()) return -1;
+        fout.Write(&buf[0], buf.size() - stream.avail_out);
+        total += (buf.size() - stream.avail_out);
     }
     if (rc < 0) throw funzip_exception("Inflate failed");
 
@@ -86,8 +82,7 @@ void FUnzip::smartDestDir(ZipStream& zs)
     if (pos == std::string::npos) return;
     std::string first = n.substr(0, pos);
 
-    for (int i = 0; i < zs.size(); i++) {
-        const auto& e = zs.getEntry(i);
+    for (const auto& e : zs) {
         if (!startsWith(e.name, first)) return;
     }
     destinationDir = "";
