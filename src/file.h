@@ -1,44 +1,48 @@
 #pragma once
 
-#include <string>
 #include <array>
 #include <stdexcept>
+#include <string>
 
-class io_exception : public std::exception {
+class io_exception : public std::exception
+{
 public:
-	io_exception(const std::string &m = "IO Exception") : msg(m) {}
-	virtual const char *what() const throw() { return msg.c_str(); }
+    io_exception(const std::string& m = "IO Exception") : msg(m) {}
+    virtual const char* what() const throw() { return msg.c_str(); }
+
 private:
-	std::string msg;
+    std::string msg;
 };
 
-class file_not_found_exception : public std::exception {
+class file_not_found_exception : public std::exception
+{
 public:
-	file_not_found_exception(const std::string &fileName = "") : msg(std::string("File not found: ") + fileName) {}
-	virtual const char *what() const throw() { return msg.c_str(); }
+    file_not_found_exception(const std::string& fileName = "")
+        : msg(std::string("File not found: ") + fileName)
+    {}
+    virtual const char* what() const throw() { return msg.c_str(); }
+
 private:
-	std::string msg;
+    std::string msg;
 };
 
-class File {
+class File
+{
 public:
-
-	enum Mode {
-		NONE = 0,
-		READ = 1,
-		WRITE = 2
-	};
-
-	File() : mode(NONE)
+    enum Mode
     {
+        NONE = 0,
+        READ = 1,
+        WRITE = 2
+    };
+
+    File() : mode(NONE) {}
+
+    File(const std::string& name, const Mode mode = NONE) : name(name)
+    {
+        if (mode != NONE) open(mode);
     }
 
-	File(const std::string &name, const Mode mode = NONE) : name(name)
-    {
-        if(mode != NONE)
-            open(mode);
-    }
-    
     File(const File&) = delete;
     File& operator=(const File&) = delete;
     File(File&& other)
@@ -50,54 +54,51 @@ public:
         other.mode = NONE;
     }
 
-    template <typename T>
-    T Read()
+    virtual ~File() { close(); }
+
+    template <typename T> T Read()
     {
         open(READ);
         T t;
-        if(fread(&t, 1, sizeof(T), fp) != sizeof(T))
+        if (fread(&t, 1, sizeof(T), fp) != sizeof(T))
             throw io_exception("Could not read object");
         return t;
     }
 
-    template <typename T>
-    size_t Read(T* target, size_t bytes) noexcept
+    template <typename T> size_t Read(T* target, size_t bytes) noexcept
     {
         open(READ);
         return fread(target, 1, bytes, fp);
     }
 
-    template <typename T, size_t N>
-    size_t Read(std::array<T, N>& target)
+    template <typename T, size_t N> size_t Read(std::array<T, N>& target)
     {
         return Read(&target[0], target.size() * sizeof(T));
     }
 
-    template <typename T>
-    void Write(const T& t)
+    template <typename T> void Write(const T& t)
     {
         open(WRITE);
-        if(fwrite(&t, 1, sizeof(T), fp) != sizeof(T))
+        if (fwrite(&t, 1, sizeof(T), fp) != sizeof(T))
             throw io_exception("Could not write object");
     }
 
-    template <typename T>
-    size_t Write(const T* target, size_t bytes) noexcept
+    template <typename T> size_t Write(const T* target, size_t bytes) noexcept
     {
         open(WRITE);
         return fwrite(target, 1, bytes, fp);
     }
 
-    enum Seek {
+    enum Seek
+    {
         Set = SEEK_SET,
         Cur = SEEK_CUR,
         End = SEEK_END
     };
 
-
     void seek(int64_t pos, int whence = Seek::Set)
     {
-        if(mode == NONE) open(READ);
+        if (mode == NONE) open(READ);
 #ifdef _WIN32
         _fseeki64(fp, pos, whence);
 #else
@@ -114,14 +115,7 @@ public:
 #endif
     }
 
-	virtual ~File() {
-        close();
-    }
-
-    bool isOpen() const
-    {
-        return mode != NONE;
-    }
+    bool isOpen() const { return mode != NONE; }
 
     bool canRead()
     {
@@ -137,35 +131,36 @@ public:
 
     void open(Mode mode)
     {
-        if(this->mode == mode) return;
-        if(this->mode != NONE) throw io_exception();
+        if (this->mode == mode) return;
+        if (this->mode != NONE) throw io_exception();
         fp = fopen(name.c_str(), mode == READ ? "rb" : "wb");
-        //printf("open %s %d got %p\n", name.c_str(), mode, fp);
+        if (!fp) throw file_not_found_exception(name);
+        // printf("open %s %d got %p\n", name.c_str(), mode, fp);
         this->mode = mode;
     }
 
     void close()
     {
-        if(fp) fclose(fp);
+        if (fp) fclose(fp);
         fp = nullptr;
         mode = NONE;
     }
 
-    File dup() {
-        File f { name, mode };
-        if(mode != NONE)
-            f.seek(tell());
+    File dup()
+    {
+        File f{name, mode};
+        if (mode != NONE) f.seek(tell());
         return f;
     }
 
     FILE* filePointer()
     {
-        if(mode == NONE) open(READ);
+        if (mode == NONE) open(READ);
         return fp;
     }
+
 private:
     std::string name;
     Mode mode = NONE;
     FILE* fp = nullptr;
-
 };

@@ -420,7 +420,6 @@ void Fastzip::exec()
                         entry.flags = ss.st_mode;
                         entry.uid = ss.st_uid;
                         entry.gid = ss.st_gid;
-                        dataSize = ss.st_size;
                     } else {
                         warning(string("Could not access " + fileName.source));
                         skipFile = true;
