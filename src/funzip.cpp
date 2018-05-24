@@ -17,6 +17,10 @@
 #include <sys/stat.h>
 #include <experimental/filesystem>
 
+#ifndef S_IFLNK
+#define S_IFLNK 0120000
+#endif
+
 namespace fs = std::experimental::filesystem;
 
 static bool copyfile(File& fout, int64_t size, File& fin)
