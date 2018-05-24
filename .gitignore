@@ -4,3 +4,4 @@ fastzip
 fastzip.exe
 *.zip
 *.o
+/.vs
