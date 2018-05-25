@@ -7,6 +7,8 @@
 #include "funzip.h"
 #include "utils.h"
 
+#include "file.h"
+
 #ifdef _WIN32
 #    include <io.h>
 #endif
@@ -113,7 +115,6 @@ void zipUnzip(const std::string& dirName, const std::string& zipName,
 
 TEST_CASE("file", "")
 {
-	std::vector
 	File f { "README.md" };
 	while(!f.atEnd()) {
 		auto line = f.readLine();

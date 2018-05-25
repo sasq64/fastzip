@@ -3,6 +3,7 @@
 #include <array>
 #include <stdexcept>
 #include <string>
+#include <cstring>
 
 class io_exception : public std::exception
 {

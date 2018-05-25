@@ -28,7 +28,6 @@ class ZipArchive
 public:
     ZipArchive(const std::string& fileName, int numFiles = 0, int strLen = 0);
 
-    ~ZipArchive();
     void doAlign(bool align) { zipAlign = align; }
     void doForce64(bool f64) { force64 = f64; }
 
@@ -51,5 +50,5 @@ private:
     uint8_t* entryPtr;
     uint64_t entryCount;
     File f;
-    uint64_t lastHeader;
+    uint64_t lastHeader = 0;
 };

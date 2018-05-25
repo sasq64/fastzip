@@ -4,7 +4,7 @@
 #include "zipformat.h"
 #include <cassert>
 #include <sys/stat.h>
-#include <time.h>
+#include <ctime>
 
 ZipStream::ZipStream(const std::string& zipName) : zipName(zipName), f{zipName}
 {
@@ -61,7 +61,7 @@ ZipStream::ZipStream(const std::string& zipName) : zipName(zipName), f{zipName}
         f.seek(cd.nameLen - rc, SEEK_CUR);
         int64_t offset = cd.offset;
         int exLen = cd.exLen;
-        Extra extra;
+        Extra extra {};
         while (exLen > 0) {
             f.Read((uint8_t*)&extra, 4);
             f.Read(extra.data, extra.size);
@@ -83,5 +83,5 @@ ZipStream::ZipStream(const std::string& zipName) : zipName(zipName), f{zipName}
 
 ZipStream::~ZipStream()
 {
-    if (comment) delete[] comment;
+    delete[] comment;
 }

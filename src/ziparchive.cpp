@@ -6,13 +6,13 @@
 
 #include <cassert>
 #include <sys/stat.h>
-#include <time.h>
+#include <ctime>
 
 ZipArchive::ZipArchive(const std::string& fileName, int numFiles, int strLen)
     : f{fileName, File::WRITE}
 {
-    assert(sizeof(LocalEntry) == 30);
-    assert(sizeof(CentralDirEntry) == 46);
+    static_assert(sizeof(LocalEntry) == 30);
+    static_assert(sizeof(CentralDirEntry) == 46);
     // fp = fopen(fileName.c_str(), "wb");
 
     // printf("Reserving space for %d files in %d bytes = %ld total\n", numFiles, strLen,
@@ -23,12 +23,6 @@ ZipArchive::ZipArchive(const std::string& fileName, int numFiles, int strLen)
         new uint8_t[strLen + numFiles * (sizeof(CentralDirEntry) + sizeof(Extra64))];
     entryPtr = entries;
     entryCount = 0;
-}
-
-ZipArchive::~ZipArchive()
-{
-    // if (fp)
-    //	close();
 }
 
 void ZipArchive::addFile(const std::string& fileName, bool store, uint64_t compSize,
@@ -61,7 +55,7 @@ void ZipArchive::add(const ZipEntry& entry)
     lastHeader = f.tell(); // ftell_x(fp);
 
     int fl = entry.name.length();
-    CentralDirEntry* e = (CentralDirEntry*)entryPtr;
+    auto* e = reinterpret_cast<CentralDirEntry*>(entryPtr);
 
     bool ext64 = force64;
     if (!ext64)
