@@ -111,6 +111,21 @@ void zipUnzip(const std::string& dirName, const std::string& zipName,
     fu.exec();
 }
 
+TEST_CASE("file", "")
+{
+	std::vector
+	File f { "README.md" };
+	while(!f.atEnd()) {
+		auto line = f.readLine();
+		puts(line.c_str());
+	}
+
+	f.seek(0);
+	for(const auto& line : f.lines()) {
+		puts(line.c_str());
+	}
+}
+
 TEST_CASE("basic", "")
 {
     removeFiles("temp/out");
