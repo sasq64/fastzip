@@ -2,8 +2,6 @@
 #include "funzip.h"
 #include "utils.h"
 
-#include "CLI11.hpp"
-
 #include <cctype>
 #include <cstdio>
 #include <cstdlib>
@@ -18,7 +16,7 @@
 #    include <unistd.h>
 #endif
 
-const std::string helpText =
+static const std::string helpText =
     R"(
 Fastzip v1.1 by Jonas Minnberg
 (c) 2015-2018 Unity Technologies
@@ -42,7 +40,8 @@ Usage: fastzip [options] <zipfile> <paths...>
 )"
 #ifdef WITH_INTEL
     "-I | --intel                           Intel-mode. Fast compression.\n"
-    "-z | --zip                             Zip-mode, better compression (default).\n"
+    "-z | --zip                             Zip-mode, better compression "
+    "(default).\n"
 #endif
     R"(-<digit>                               Pack level; 0 = Store only, 1-9 =
                                        Zip-mode compression level.
@@ -99,7 +98,6 @@ int main(int argc, char** argv)
 
     int packLevel = 5;
     int packMode = INFOZIP;
-    bool noFiles = true;
     std::string destDir;
     bool extractMode = false;
     bool listFiles = false;
@@ -115,13 +113,12 @@ int main(int argc, char** argv)
     for (int i = 1; i < argc; i++) {
         if (argv[i][0] == '-') {
             std::string name;
-            std::vector<std::string> parts;
             std::vector<std::string> args;
             char opt = 0;
 
             // Parse option
             if (argv[i][1] == '-') {
-                parts = split(&argv[i][2], "=");
+                auto parts = split(&argv[i][2], "=");
                 name = parts[0];
                 if (parts.size() > 1) args = split(parts[1], ",");
             } else {
@@ -159,8 +156,9 @@ int main(int argc, char** argv)
                 std::string zipName = argv[++i];
                 if (fileExists(zipName)) {
                     PackFormat packFormat =
-                        (packLevel == 0 || packMode == INFOZIP ? (PackFormat)packLevel
-                                                               : INTEL_COMPRESSED);
+                        (packLevel == 0 || packMode == INFOZIP
+                             ? (PackFormat)packLevel
+                             : INTEL_COMPRESSED);
                     fs.addZip(zipName, packFormat);
                 } else
                     warning(std::string("File not found: ") + zipName);
@@ -179,7 +177,8 @@ int main(int argc, char** argv)
             } else if (name == "verbose" || opt == 'v')
                 fs.verbose = true;
             else if (name == "threads" || opt == 't') {
-                if (args.size() != 1) error("'threads' needs exactly one argument");
+                if (args.size() != 1)
+                    error("'threads' needs exactly one argument");
                 fs.threadCount = atoi(args[0].c_str());
             } else if (opt == 'x') {
                 extractMode = true;
@@ -195,35 +194,28 @@ int main(int argc, char** argv)
             if (fs.zipfile == "")
                 fs.zipfile = argv[i];
             else {
-                PackFormat packFormat =
-                    (packLevel == 0 || packMode == INFOZIP ? (PackFormat)packLevel
-                                                           : INTEL_COMPRESSED);
+                PackFormat packFormat = (packLevel == 0 || packMode == INFOZIP
+                                             ? (PackFormat)packLevel
+                                             : INTEL_COMPRESSED);
                 fs.addDir(argv[i], packFormat);
-                noFiles = false;
             }
         }
     }
 
     if (!isatty(fileno(stdin))) {
-        char line[1024];
-        while (true) {
-            if (!fgets(line, sizeof(line), stdin)) break;
-            auto e = strlen(line) - 1;
-            while (line[e] == 10 || line[e] == 13)
-                line[e--] = 0;
-            PackFormat packFormat =
-                (packLevel == 0 || packMode == INFOZIP ? (PackFormat)packLevel
-                                                       : INTEL_COMPRESSED);
+        PackFormat packFormat =
+            (packLevel == 0 || packMode == INFOZIP ? (PackFormat)packLevel
+                                                   : INTEL_COMPRESSED);
+        for (const auto& line : File::getStdIn().lines()) {
             fs.addDir(line, packFormat);
-            noFiles = false;
         }
     }
 
     // If only a directory is given, pack that to a zip
     struct stat ss;
-    if (noFiles && stat(fs.zipfile.c_str(), &ss) == 0) {
+    if (fs.fileCount() == 0 && stat(fs.zipfile.c_str(), &ss) == 0) {
         std::string ext;
-        auto dot = fs.zipfile.find_last_of(".");
+        auto dot = fs.zipfile.find_last_of('.');
         if (dot != std::string::npos) ext = fs.zipfile.substr(dot + 1);
         if (ext == "zip" || ext == "ZIP") {
             extractMode = true;
@@ -234,7 +226,8 @@ int main(int argc, char** argv)
                                                        : INTEL_COMPRESSED);
             fs.addDir(fs.zipfile, packFormat);
             auto last = fs.zipfile.find_last_of("\\/");
-            if (last != std::string::npos) fs.zipfile = fs.zipfile.substr(last + 1);
+            if (last != std::string::npos)
+                fs.zipfile = fs.zipfile.substr(last + 1);
             fs.zipfile = fs.zipfile + ".zip";
         }
     }

@@ -112,6 +112,10 @@ void sign(ZipArchive& zipArchive, KeyStore& keyStore, const string& digestFile)
 
     RSA_sign(NID_sha1, digest, SHA_LEN, &sign[0], &signLen, rsa);
 
+    RSA_free(rsa);
+
+    BIO_free_all(bio);
+
     sign.resize(signLen);
     // clang-format off
     auto data =

@@ -14,19 +14,19 @@
 #include <string>
 #include <vector>
 
-#include <sys/stat.h>
 #include <experimental/filesystem>
+#include <sys/stat.h>
 
 #ifndef S_IFLNK
-#define S_IFLNK 0120000
+#    define S_IFLNK 0120000
 #endif
 
 namespace fs = std::experimental::filesystem;
 
-static bool copyfile(File& fout, int64_t size, File& fin)
+static bool copyfile(File& fout, size_t size, File& fin)
 {
     if (!fout.canWrite()) return false;
-    std::array<uint8_t, 65536*4> buf;
+    std::array<uint8_t, 65536 * 4> buf;
     while (size > 0) {
         auto rc = fin.Read(&buf[0], size < buf.size() ? size : buf.size());
         if (rc == 0) return rc;
@@ -41,7 +41,7 @@ static int64_t uncompress(File& fout, int64_t inSize, File& fin)
     int64_t total = 0;
     std::array<uint8_t, 65536> buf;
 
-    mz_stream stream {};
+    mz_stream stream{};
     mz_inflateInit2(&stream, -MZ_DEFAULT_WINDOW_BITS);
 
     auto data = std::make_unique<uint8_t[]>(inSize > 0 ? inSize : buf.size());
@@ -71,6 +71,8 @@ static int64_t uncompress(File& fout, int64_t inSize, File& fin)
 
     mz_inflate(&stream, MZ_FINISH);
 
+    mz_inflateEnd(&stream);
+
     return total;
 }
 
@@ -92,8 +94,9 @@ void FUnzip::smartDestDir(ZipStream& zs)
     destinationDir = "";
 }
 
-static inline void setMeta(const std::string& name, uint16_t flags, uint32_t datetime,
-                           int uid, int gid, bool link = false)
+static inline void setMeta(const std::string& name, uint16_t flags,
+                           uint32_t datetime, int uid, int gid,
+                           bool link = false)
 {
     auto ft = msdosToFileTime(datetime);
     fs::last_write_time(name, ft);
@@ -122,7 +125,8 @@ static inline void setMeta(const std::string& name, uint16_t flags, uint32_t dat
 	}
 #endif
 }
-static void readExtra(File& f, int exLen, int* uid, int* gid, int64_t* compSize = nullptr,
+static void readExtra(File& f, int exLen, int* uid, int* gid,
+                      int64_t* compSize = nullptr,
                       int64_t* uncompSize = nullptr)
 {
     Extra extra;
@@ -162,7 +166,8 @@ void FUnzip::exec()
     }
 
     if (destinationDir == "") smartDestDir(zs);
-    if (destinationDir != "" && destinationDir[destinationDir.size() - 1] != '/')
+    if (destinationDir != "" &&
+        destinationDir[destinationDir.size() - 1] != '/')
         destinationDir += "/";
 
     std::vector<int> links;
@@ -173,7 +178,8 @@ void FUnzip::exec()
 
     for (auto& t : workerThreads) {
         t = std::thread([&zs, &entryNum, &lm, &links, &dirs, f = zs.dupFile(),
-                         verbose = verbose, destDir = destinationDir]() mutable {
+                         verbose = verbose,
+                         destDir = destinationDir]() mutable {
             while (true) {
                 int en = entryNum++;
                 if (en >= zs.size()) break;
@@ -205,8 +211,9 @@ void FUnzip::exec()
                 if (dname != "" && !fileExists(dname)) makedirs(dname);
 
                 if (verbose) printf("%s\n", name.c_str());
-                // printf("%s %x %s %s\n", fileName, a, (a & S_IFDIR)  == S_IFDIR ? "DIR"
-                // : "", (a & S_IFLNK) == S_IFLNK ? "LINK" : "");
+                // printf("%s %x %s %s\n", fileName, a, (a & S_IFDIR)  ==
+                // S_IFDIR ? "DIR" : "", (a & S_IFLNK) == S_IFLNK ? "LINK" :
+                // "");
 
                 auto fout = File{name, File::Mode::WRITE};
                 if (!fout.canWrite()) {
@@ -245,7 +252,9 @@ void FUnzip::exec()
         auto dname = path_directory(name);
         auto fname = path_filename(e.name);
         // int fd = open(dname.c_str(), 0);
-        if (verbose) printf("Link %s/%s -> %s\n", dname.c_str(), fname.c_str(), linkName);
+        if (verbose)
+            printf("Link %s/%s -> %s\n", dname.c_str(), fname.c_str(),
+                   linkName);
         fs::create_symlink(linkName, fname);
         // symlinkat(linkName, fd, fname.c_str());
         // close(fd);

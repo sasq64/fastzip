@@ -91,6 +91,8 @@ public:
     // Set the output function used to report warnings. Default is to print to stderr
     void setOuputFunction(std::function<void(const std::string)> f) { warning = f; }
 
+    size_t fileCount() { return fileNames.size(); }
+
 private:
     std::function<void(const std::string)> warning = [&](const std::string& text) {
         fprintf(stderr, "**Warn: %s\n", text.c_str());

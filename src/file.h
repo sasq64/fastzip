@@ -4,6 +4,11 @@
 #include <stdexcept>
 #include <string>
 #include <cstring>
+#ifdef _WIN32
+#include <io.h>
+#else
+#include <unistd.h>
+#endif
 
 class io_exception : public std::exception
 {
@@ -27,6 +32,8 @@ private:
     std::string msg;
 };
 
+struct LineReader;
+
 class File
 {
 public:
@@ -40,10 +47,17 @@ public:
 	enum OpenResult { OK, FILE_NOT_FOUND, ALREADY_OPEN };
 
     File() : mode(NONE) {}
+    File(FILE* fp, Mode mode) : mode(mode), fp(fp) {} 
 
     File(const std::string& name, const Mode mode = NONE) : name(name)
     {
         if (mode != NONE) openAndThrow(mode);
+    }
+
+
+    static File& getStdIn() {
+        static File _stdin { stdin, Mode::READ };
+        return _stdin;
     }
 
     File(const File&) = delete;
@@ -102,49 +116,8 @@ public:
 		return result;
 	}
 
-	struct LineReader {
-
-		LineReader(File& f) : f(f) {}
-		File& f;
-		std::string line;
-
-		struct iterator {
-			iterator(File&f, ssize_t offset) : f(f), offset(offset) {
-				if(offset >= 0)
-					f.seek(offset);
-				line = f.readLine();
-			}
-
-			File& f;
-			ssize_t offset;
-			std::string line;
-
-			bool operator!=(const iterator& other) const {
-				return offset != other.offset;
-			}
-
-			std::string operator*() const { return line; }
-
-			iterator& operator++() {
-				if(f.atEnd())
-					offset = -1;
-				else {
-					offset = f.tell();
-					line = f.readLine();
-				}
-				return *this;
-			}
-		};
-
-		iterator begin() const { return iterator(f, 0); }
-		iterator end() const { return iterator(f, -1); }
-	};
-
-	LineReader lines()
-	{
-		return LineReader(*this);
-
-	}
+	inline LineReader lines() &;
+	inline LineReader lines() &&;
 
     template <typename T> void Write(const T& t)
     {
@@ -242,10 +215,16 @@ public:
         mode = NONE;
     }
 
-    File dup()
+    File dup() const
     {
+        if(name == "") {
+            FILE *fp2;
+            fp2 = fdopen (::dup (fileno (fp)), mode == Mode::READ ? "rb" : "wb");
+            File f { fp2, mode };
+            return f;
+        }
         File f{name, mode};
-        if (mode != NONE) f.seek(tell());
+        if (mode != NONE) f.seek(const_cast<File*>(this)->tell());
         return f;
     }
 
@@ -261,3 +240,57 @@ private:
     Mode mode = NONE;
     FILE* fp = nullptr;
 };
+
+struct LineReader {
+    friend File;
+private:
+    LineReader(File& af) : rf(af) { }
+    LineReader(File&& af) : f(std::move(af)), rf(f) { }
+public:
+    File f{};
+    File& rf;
+    std::string line;
+
+    struct iterator {
+        iterator(File&f, ssize_t offset) : f(f), offset(offset) {
+            if(offset >= 0)
+                f.seek(offset);
+            line = f.readLine();
+        }
+
+        File& f;
+        ssize_t offset;
+        std::string line;
+
+        bool operator!=(const iterator& other) const {
+            return offset != other.offset;
+        }
+
+        std::string operator*() const { return line; }
+
+        iterator& operator++() {
+            if(f.atEnd())
+                offset = -1;
+            else {
+                offset = f.tell();
+                line = f.readLine();
+            }
+            return *this;
+        }
+    };
+
+    iterator begin() { return iterator(rf, 0); }
+    iterator end() { return iterator(rf, -1); }
+};
+
+LineReader File::lines() &
+{
+    return LineReader(*this);
+}
+
+LineReader File::lines() &&
+{
+    return LineReader(std::move(*this));
+
+}
+
