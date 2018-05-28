@@ -70,11 +70,11 @@ static int store_compressed(File& f, int inSize, uint8_t* target, uint8_t* sha)
     return total;
 }
 
-enum PackResult
+enum class PackResult
 {
-    RC_FAILED = -1,
-    RC_COMPRESSED = 0,
-    RC_STORED = 1
+    FAILED = -1,
+    COMPRESSED = 0,
+    STORED = 1
 };
 
 static PackResult store_uncompressed(File& f, int inSize, uint8_t* out, size_t* outSize,
@@ -94,7 +94,7 @@ static PackResult store_uncompressed(File& f, int inSize, uint8_t* out, size_t* 
     }
     *outSize = size;
 
-    return RC_STORED;
+    return PackResult::STORED;
 }
 
 #ifdef WITH_INTEL
@@ -106,7 +106,7 @@ static PackResult intel_deflate(File& f, size_t inSize, uint8_t* buffer, size_t*
     const int IN_SIZE = 1024 * 32;
 
     uint8_t* fileData = buffer + *outSize - inSize;
-    if (f.Read(fileData, inSize) != inSize) return RC_FAILED;
+    if (f.Read(fileData, inSize) != inSize) return PackResult::FAILED;
 
     uint8_t* inBuf = fileData;
 
@@ -153,13 +153,13 @@ static PackResult intel_deflate(File& f, size_t inSize, uint8_t* buffer, size_t*
                     if (checksum) {
                         *checksum = crc32_fast(buffer, inSize);
                     }
-                    return RC_STORED;
+                    return PackResult::STORED;
                 }
                 earlyOut = 0;
             }
 
             if (stream.next_out + IN_SIZE >= inBuf) {
-                return RC_FAILED;
+                return PackResult::FAILED;
             }
         }
     } while (stream.end_of_stream == 0);
@@ -168,7 +168,7 @@ static PackResult intel_deflate(File& f, size_t inSize, uint8_t* buffer, size_t*
 
     *outSize = *outSize - stream.avail_out;
 
-    return RC_COMPRESSED;
+    return PackResult::COMPRESSED;
 }
 
 #endif
@@ -177,7 +177,7 @@ static PackResult infozip_deflate(int packLevel, File& f, int inSize, uint8_t* b
                                   size_t* outSize, uint32_t* checksum, uint8_t* sha)
 {
     uint8_t* fileData = buffer + *outSize - inSize;
-    if ((int)f.Read(fileData, inSize) != inSize) return RC_FAILED;
+    if ((int)f.Read(fileData, inSize) != inSize) return PackResult::FAILED;
 
     if (sha) {
         SHA_CTX context;
@@ -192,17 +192,17 @@ static PackResult infozip_deflate(int packLevel, File& f, int inSize, uint8_t* b
 
     int64_t compSize =
         iz_deflate(packLevel, (char*)buffer, (char*)fileData, *outSize, inSize);
-    if (compSize == -1) return RC_FAILED;
+    if (compSize == -1) return PackResult::FAILED;
 
     if (compSize == -2) {
         *outSize = inSize << 3;
         // memmove(buffer, fileData, inSize);
-        return RC_STORED;
+        return PackResult::STORED;
     }
 
     *outSize = compSize;
 
-    return RC_COMPRESSED;
+    return PackResult::COMPRESSED;
 }
 
 void Fastzip::packZipData(File& f, int size, PackFormat inFormat, PackFormat outFormat,
@@ -238,13 +238,13 @@ void Fastzip::packZipData(File& f, int size, PackFormat inFormat, PackFormat out
         else
             state = store_uncompressed(f, size, outBuf, &outSize, &target.crc, sha);
 
-        if (state == RC_FAILED) {
+        if (state == PackResult::FAILED) {
             warning(string("Compression failed! Storing '") + target.name +
                     "' as a fallback");
             f.seek(startPos);
             state = store_uncompressed(f, size, outBuf, &outSize, &target.crc, sha);
         }
-        if (state == RC_STORED) target.store = true;
+        if (state == PackResult::STORED) target.store = true;
         target.originalSize = size;
     } else if (inFormat > 0 && outFormat == COMPRESSED) {
         // Keep format, just inflate to calculate sha if necessary
@@ -262,7 +262,7 @@ void Fastzip::packZipData(File& f, int size, PackFormat inFormat, PackFormat out
     target.dataSize = outSize;
 }
 
-void Fastzip::addZip(string zipName, PackFormat packFormat)
+void Fastzip::addZip(fs::path zipName, PackFormat packFormat)
 {
     ZipStream zs{zipName};
     for (int i = 0; i < zs.size(); i++) {
@@ -278,18 +278,13 @@ void Fastzip::addZip(string zipName, PackFormat packFormat)
     }
 }
 
-void Fastzip::addDir(string d, PackFormat packFormat)
+void Fastzip::addDir(const PathAlias& dirName, PackFormat packFormat)
 {
-    string translateDir = "";
-    auto parts = split(d, "=");
-    if (parts.size() > 1) {
-        d = parts[0];
-        translateDir = parts[1];
-    }
+	const string& d = dirName.diskPath;
 
     // Set 'skipLen' to the number of chars to strip from the start of each path name
     int skipLen = 0;
-    if (translateDir.length() > 0) {
+    if (dirName.aliasTo.length() > 0) {
         skipLen = d.length();
     } else if (junkPaths) {
         auto last = d.find_last_of("\\/");
@@ -326,8 +321,8 @@ void Fastzip::addDir(string d, PackFormat packFormat)
             }
         }
 
-        if (translateDir.length()) {
-            target = translateDir + target;
+        if (dirName.aliasTo.length()) {
+            target = dirName.aliasTo + target;
         }
         for (unsigned i = 0; i < target.length(); i++) {
             if (target[i] == '\\') target[i] = '/';
@@ -346,6 +341,8 @@ void Fastzip::exec()
     using std::thread;
     using std::unique_lock;
 
+	std::error_code ec;
+
     if (fileNames.size() == 0) throw fastzip_exception("No paths specified");
     if (fileNames.size() >= 65535) warning("More than 64K files, adding 64bit features.");
     if (zipfile == "") throw fastzip_exception("Zipfile must be specified");
@@ -355,14 +352,14 @@ void Fastzip::exec()
             throw fastzip_exception("Could not load keystore");
     }
 
-    const string tempFile = zipfile + ".fastzip_";
-    remove(tempFile.c_str());
+    const fs::path tempFile = fs::path(zipfile.string() + ".fastzip_");
+	fs::remove(tempFile, ec);
     ZipArchive zipArchive(tempFile.c_str(), fileNames.size() + 5, strLen + 1024);
     zipArchive.doAlign(zipAlign);
     zipArchive.doForce64(force64);
 
-    char* digestFile = new char[strLen + fileNames.size() * 6400];
-    char* digestPtr = digestFile;
+    auto digestFile = std::make_unique<char[]>(strLen + fileNames.size() * 6400);
+    char* digestPtr = digestFile.get();
 
     mutex m;
     condition_variable seq_cv;
@@ -421,12 +418,12 @@ void Fastzip::exec()
                         entry.uid = ss.st_uid;
                         entry.gid = ss.st_gid;
                     } else {
-                        warning(string("Could not access " + fileName.source));
+                        warning(string("Could not access ") + fileName.source.string());
                         skipFile = true;
                     }
 #ifndef _WIN32
                     if (!skipFile && (ss.st_mode & S_IFLNK) == S_IFLNK) {
-                        warning(string("Skipping symlink " + fileName.source));
+                        warning(string("Skipping symlink ") + fileName.source.string());
                         skipFile = true;
                     }
 #endif
@@ -439,7 +436,7 @@ void Fastzip::exec()
 
                 if (!skipFile) {
                     if (!f.canRead()) {
-                        warning(string("Could not read " + fileName.source));
+                        warning(string("Could not read ") + fileName.source.string());
                         skipFile = true;
                     }
                 }
@@ -507,7 +504,7 @@ void Fastzip::exec()
     if (doSign) {
         lock_guard<mutex> lock{m};
         keyStore.setCurrentKey(keyName, keyPassword);
-        sign(zipArchive, keyStore, digestFile);
+        sign(zipArchive, keyStore, digestFile.get());
     }
 
     zipArchive.close();
@@ -515,6 +512,4 @@ void Fastzip::exec()
     remove(zipfile.c_str());
     if (rename(tempFile.c_str(), zipfile.c_str()) != 0)
         throw fastzip_exception("Could not write target file");
-
-    delete[] digestFile;
 }

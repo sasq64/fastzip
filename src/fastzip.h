@@ -4,8 +4,10 @@
 #include "utils.h"
 
 #include <cstdint>
+#include <experimental/filesystem>
 #include <functional>
 #include <vector>
+namespace fs = std::experimental::filesystem;
 
 class fastzip_exception : public std::exception
 {
@@ -41,6 +43,24 @@ enum PackFormat
     UNKNOWN
 };
 
+struct PathAlias
+{
+    PathAlias(const std::string& alias)
+    {
+        auto parts = split(alias, "=");
+        if (parts.size() > 1) {
+            diskPath = parts[0];
+            aliasTo = parts[1];
+        }
+    }
+
+	PathAlias(const char* path) : PathAlias(std::string(path)) { }
+    PathAlias(const fs::path& path) : diskPath(path) {}
+
+    fs::path diskPath;
+    std::string aliasTo;
+};
+
 struct FileTarget
 {
     FileTarget(const std::string& source = "", const std::string& target = "",
@@ -48,15 +68,21 @@ struct FileTarget
         : source(source), target(target), packFormat(pf)
     {}
 
-    std::string source;
+    fs::path source;
     std::string target;
     uint64_t offset = 0xffffffff;
     uint64_t size = 0;
     PackFormat packFormat;
 
-    bool operator==(const FileTarget& other) const { return other.target == target; }
+    bool operator==(const FileTarget& other) const
+    {
+        return other.target == target;
+    }
 
-    bool operator<(const FileTarget& other) const { return other.target < target; }
+    bool operator<(const FileTarget& other) const
+    {
+        return other.target < target;
+    }
 };
 
 struct ZipEntry;
@@ -67,14 +93,14 @@ class Fastzip
 {
 public:
     // Variables to be set by application code
-    std::string zipfile;
+    fs::path zipfile;
     bool verbose = false;
     bool junkPaths = false;
     bool doSign = false;
     bool doSeq = false;
     bool zipAlign = false;
     std::vector<std::string> storeExts;
-    std::string keystoreName;
+    fs::path keystoreName;
     std::string keyPassword;
     std::string keyName;
     int threadCount = 1;
@@ -82,28 +108,32 @@ public:
     bool force64 = false;
 
     // Add a file to be packed into the target zip
-    void addZip(std::string zipName, PackFormat format);
+    void addZip(fs::path zipName, PackFormat format);
     // Add a directory to be recursively packed into the target zip
-    void addDir(std::string dirName, PackFormat format);
+    void addDir(const PathAlias& dirName, PackFormat format);
     // Run fastzip with given options and files
     void exec();
 
-    // Set the output function used to report warnings. Default is to print to stderr
-    void setOuputFunction(std::function<void(const std::string)> f) { warning = f; }
+    // Set the output function used to report warnings. Default is to print to
+    // stderr
+    void setOuputFunction(std::function<void(const std::string)> f)
+    {
+        warning = f;
+    }
 
     size_t fileCount() { return fileNames.size(); }
 
 private:
-    std::function<void(const std::string)> warning = [&](const std::string& text) {
-        fprintf(stderr, "**Warn: %s\n", text.c_str());
-    };
+    std::function<void(const std::string)> warning =
+        [&](const std::string& text) {
+            fprintf(stderr, "**Warn: %s\n", text.c_str());
+        };
 
-    void packZipData(File& f, int size, PackFormat inFormat, PackFormat outFormat,
-                     uint8_t* sha, ZipEntry& target);
+    void packZipData(File& f, int size, PackFormat inFormat,
+                     PackFormat outFormat, uint8_t* sha, ZipEntry& target);
 
     UniQueue<FileTarget> fileNames;
     int strLen = 0;
 
     KeyStore keyStore;
 };
-

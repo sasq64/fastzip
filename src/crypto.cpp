@@ -145,12 +145,12 @@ std::vector<uint8_t> recoverKey(const std::string& password,
     return plainKey;
 }
 
-KeyStore::KeyStore(const std::string& name, const std::string& pass)
+KeyStore::KeyStore(const fs::path& name, const std::string& pass)
 {
     load(name, pass);
 }
 
-bool KeyStore::load(const std::string& name, const std::string& pass)
+bool KeyStore::load(const fs::path& name, const std::string& pass)
 {
     if (name == "") {
         return load(fastzip_keystore, pass);

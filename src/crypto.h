@@ -8,6 +8,9 @@
 #include <unordered_map>
 #include <vector>
 
+#include <experimental/filesystem>
+namespace fs = std::experimental::filesystem;
+
 class key_exception : public std::exception
 {
 public:
@@ -27,9 +30,9 @@ class KeyStore
 {
 public:
 	KeyStore() {}
-	KeyStore(const std::string& fileName, const std::string& pass = "");
+	KeyStore(const fs::path& fileName, const std::string& pass = "");
 
-	bool load(const std::string& fileName, const std::string& pass = "");
+	bool load(const fs::path& fileName, const std::string& pass = "");
 	bool load(const std::vector<uint8_t>& data, const std::string& pass = "");
 
 	std::vector<uint8_t> getKey(const std::string& pass, const std::string& name = "");

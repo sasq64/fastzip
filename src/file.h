@@ -1,13 +1,13 @@
 #pragma once
 
 #include <array>
+#include <cstring>
 #include <stdexcept>
 #include <string>
-#include <cstring>
 #ifdef _WIN32
-#include <io.h>
+#    include <io.h>
 #else
-#include <unistd.h>
+#    include <unistd.h>
 #endif
 
 class io_exception : public std::exception
@@ -32,8 +32,6 @@ private:
     std::string msg;
 };
 
-struct LineReader;
-
 class File
 {
 public:
@@ -44,24 +42,41 @@ public:
         WRITE = 2
     };
 
-	enum OpenResult { OK, FILE_NOT_FOUND, ALREADY_OPEN };
+    enum class OpenResult
+    {
+        OK,
+        FILE_NOT_FOUND,
+        ALREADY_OPEN
+    };
+
+    enum Seek
+    {
+        Set = SEEK_SET,
+        Cur = SEEK_CUR,
+        End = SEEK_END
+    };
+
+    static File& getStdIn()
+    {
+        static File _stdin{stdin, Mode::READ};
+        return _stdin;
+    }
+
+    // Constructors
 
     File() : mode(NONE) {}
-    File(FILE* fp, Mode mode) : mode(mode), fp(fp) {} 
+
+    File(FILE* fp, Mode mode) : mode(mode), fp(fp) {}
 
     File(const std::string& name, const Mode mode = NONE) : name(name)
     {
         if (mode != NONE) openAndThrow(mode);
     }
 
-
-    static File& getStdIn() {
-        static File _stdin { stdin, Mode::READ };
-        return _stdin;
-    }
-
     File(const File&) = delete;
+
     File& operator=(const File&) = delete;
+
     File(File&& other)
     {
         fp = other.fp;
@@ -71,7 +86,11 @@ public:
         other.mode = NONE;
     }
 
+    // Destructor
+
     virtual ~File() { close(); }
+
+    // Reading
 
     template <typename T> T Read()
     {
@@ -93,31 +112,33 @@ public:
         return Read(&target[0], target.size() * sizeof(T));
     }
 
-	std::array<char, 10> lineTarget; 
+    std::string readLine()
+    {
+        std::array<char, 10> lineTarget;
+        openAndThrow(READ);
+        char* ptr = fgets(&lineTarget[0], lineTarget.size(), fp);
+        if (!ptr) {
+            if (feof(fp)) return "";
+            throw io_exception();
+        }
+        auto len = std::strlen(ptr);
+        std::string result;
+        while (ptr[len - 1] != '\n') {
+            result += std::string{&lineTarget[0], len};
+            ptr = fgets(&lineTarget[0], lineTarget.size(), fp);
+            if (!ptr) throw io_exception();
+            len = std::strlen(ptr);
+        }
+        while (len > 0 && (ptr[len - 1] == '\n' || ptr[len - 1] == '\r'))
+            len--;
+        result += std::string{&lineTarget[0], len};
+        return result;
+    }
 
-	std::string readLine()
-	{
-		openAndThrow(READ);
-		char* ptr = fgets(&lineTarget[0], lineTarget.size(), fp);
-		if(!ptr) {
-			if(feof(fp)) return "";
-			throw io_exception();
-		}
-		auto len = std::strlen(ptr);
-		std::string result;
-		while(ptr[len-1] != '\n') {
-			result += std::string{ &lineTarget[0], len };
-			ptr = fgets(&lineTarget[0], lineTarget.size(), fp);
-			if(!ptr) throw io_exception();
-			len = std::strlen(ptr);
-		}
-		while(len > 0 && (ptr[len-1] == '\n' || ptr[len-1] == '\r')) len--;
-		result += std::string{ &lineTarget[0], len };
-		return result;
-	}
+    inline auto lines() &;
+    inline auto lines() &&;
 
-	inline LineReader lines() &;
-	inline LineReader lines() &&;
+    // Writing
 
     template <typename T> void Write(const T& t)
     {
@@ -132,19 +153,11 @@ public:
         return fwrite(target, 1, bytes, fp);
     }
 
-    enum Seek
+    bool atEnd()
     {
-        Set = SEEK_SET,
-        Cur = SEEK_CUR,
-        End = SEEK_END
-    };
-
-	bool atEnd()
-	{
-		if(mode == NONE) openAndThrow(READ);
-		return feof(fp);
-	}
-
+        if (mode == NONE) openAndThrow(READ);
+        return feof(fp);
+    }
 
     void seek(int64_t pos, int whence = Seek::Set)
     {
@@ -184,7 +197,6 @@ public:
         return tmp_fp != nullptr;
     }
 
-
     OpenResult open(Mode mode) noexcept
     {
         if (this->mode == mode) return OpenResult::OK;
@@ -192,21 +204,19 @@ public:
         fp = fopen(name.c_str(), mode == READ ? "rb" : "wb");
         if (!fp) return OpenResult::FILE_NOT_FOUND;
         this->mode = mode;
-		return OpenResult::OK;
+        return OpenResult::OK;
     }
 
-	void openAndThrow(Mode mode)
-	{
-		auto result = open(mode);
-		switch(result) {
-			case OpenResult::OK:
-				return;
-			case OpenResult::FILE_NOT_FOUND:
-				throw file_not_found_exception(name);
-			case OpenResult::ALREADY_OPEN:
-				throw io_exception("Can not open file in different mode");
-		}
-	}
+    void openAndThrow(Mode mode)
+    {
+        auto result = open(mode);
+        switch (result) {
+        case OpenResult::OK: return;
+        case OpenResult::FILE_NOT_FOUND: throw file_not_found_exception(name);
+        case OpenResult::ALREADY_OPEN:
+            throw io_exception("Can not open file in different mode");
+        }
+    }
 
     void close() noexcept
     {
@@ -217,11 +227,10 @@ public:
 
     File dup() const
     {
-        if(name == "") {
-            FILE *fp2;
-            fp2 = fdopen (::dup (fileno (fp)), mode == Mode::READ ? "rb" : "wb");
-            File f { fp2, mode };
-            return f;
+        if (name == "") {
+            auto* fp2 =
+                fdopen(::dup(fileno(fp)), mode == Mode::READ ? "rb" : "wb");
+            return File{fp2, mode};
         }
         File f{name, mode};
         if (mode != NONE) f.seek(const_cast<File*>(this)->tell());
@@ -241,20 +250,21 @@ private:
     FILE* fp = nullptr;
 };
 
-struct LineReader {
+template <bool REFERENCE> class LineReader
+{
     friend File;
-private:
-    LineReader(File& af) : rf(af) { }
-    LineReader(File&& af) : f(std::move(af)), rf(f) { }
-public:
-    File f{};
-    File& rf;
+
+    LineReader(File& af) : f(af) {}
+    LineReader(File&& af) : f(std::move(af)) {}
+
+    typename std::conditional<REFERENCE, File&, File>::type f;
     std::string line;
 
-    struct iterator {
-        iterator(File&f, ssize_t offset) : f(f), offset(offset) {
-            if(offset >= 0)
-                f.seek(offset);
+    struct iterator
+    {
+        iterator(File& f, ssize_t offset) : f(f), offset(offset)
+        {
+            if (offset >= 0) f.seek(offset);
             line = f.readLine();
         }
 
@@ -262,14 +272,16 @@ public:
         ssize_t offset;
         std::string line;
 
-        bool operator!=(const iterator& other) const {
+        bool operator!=(const iterator& other) const
+        {
             return offset != other.offset;
         }
 
         std::string operator*() const { return line; }
 
-        iterator& operator++() {
-            if(f.atEnd())
+        iterator& operator++()
+        {
+            if (f.atEnd())
                 offset = -1;
             else {
                 offset = f.tell();
@@ -279,18 +291,17 @@ public:
         }
     };
 
-    iterator begin() { return iterator(rf, 0); }
-    iterator end() { return iterator(rf, -1); }
+public:
+    iterator begin() { return iterator(f, 0); }
+    iterator end() { return iterator(f, -1); }
 };
 
-LineReader File::lines() &
+auto File::lines() &
 {
-    return LineReader(*this);
+    return LineReader<true>(*this);
 }
 
-LineReader File::lines() &&
+auto File::lines() &&
 {
-    return LineReader(std::move(*this));
-
+    return LineReader<false>(std::move(*this));
 }
-
