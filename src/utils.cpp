@@ -21,8 +21,8 @@ void makedirs(const std::string& path)
 
 std::string path_basename(const std::string& name)
 {
-		return fs::path(name).stem().string();
-	}
+    return fs::path(name).stem().string();
+}
 
 std::string path_directory(const std::string& name)
 {
@@ -46,11 +46,13 @@ bool fileExists(const std::string& name)
     return stat(name.c_str(), &ss) == 0;
 }
 
-void _listFiles(const std::string& dirName, const std::function<void(const std::string& path)>& f)
+void _listFiles(const std::string& dirName,
+                const std::function<void(const std::string& path)>& f)
 {
     for (const auto& p : fs::directory_iterator(dirName)) {
         auto&& path = p.path().string();
-        if (path[0] == '.' && (path[1] == 0 || (path[1] == '.' && path[2] == 0)))
+        if (path[0] == '.' &&
+            (path[1] == 0 || (path[1] == '.' && path[2] == 0)))
             continue;
         if (fs::is_directory(p.status()))
             listFiles(path, f);
@@ -92,4 +94,3 @@ void removeFiles(const std::string& dirName)
     std::error_code ec;
     fs::remove_all(dirName, ec);
 }
-
