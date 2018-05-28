@@ -13,8 +13,8 @@
 class io_exception : public std::exception
 {
 public:
-    io_exception(const std::string& m = "IO Exception") : msg(m) {}
-    virtual const char* what() const throw() { return msg.c_str(); }
+    explicit io_exception(std::string m = "IO Exception") : msg(std::move(m)) {}
+    const char* what() const noexcept override { return msg.c_str(); }
 
 private:
     std::string msg;
@@ -23,10 +23,10 @@ private:
 class file_not_found_exception : public std::exception
 {
 public:
-    file_not_found_exception(const std::string& fileName = "")
+    explicit file_not_found_exception(const std::string& fileName = "")
         : msg(std::string("File not found: ") + fileName)
     {}
-    virtual const char* what() const throw() { return msg.c_str(); }
+    const char* what() const noexcept override { return msg.c_str(); }
 
 private:
     std::string msg;
@@ -68,7 +68,7 @@ public:
 
     File(FILE* fp, Mode mode) : mode(mode), fp(fp) {}
 
-    File(const std::string& name, const Mode mode = NONE) : name(name)
+    explicit File(std::string name, const Mode mode = NONE) : name(std::move(name))
     {
         if (mode != NONE) openAndThrow(mode);
     }
@@ -77,7 +77,7 @@ public:
 
     File& operator=(const File&) = delete;
 
-    File(File&& other)
+    File(File&& other) noexcept
     {
         fp = other.fp;
         name = other.name;
@@ -227,7 +227,7 @@ public:
 
     File dup() const
     {
-        if (name == "") {
+        if (name.empty()) {
             auto* fp2 =
                 fdopen(::dup(fileno(fp)), mode == Mode::READ ? "rb" : "wb");
             return File{fp2, mode};
@@ -254,8 +254,8 @@ template <bool REFERENCE> class LineReader
 {
     friend File;
 
-    LineReader(File& af) : f(af) {}
-    LineReader(File&& af) : f(std::move(af)) {}
+    explicit LineReader(File& af) : f(af) {}
+    explicit LineReader(File&& af) : f(std::move(af)) {}
 
     typename std::conditional<REFERENCE, File&, File>::type f;
     std::string line;

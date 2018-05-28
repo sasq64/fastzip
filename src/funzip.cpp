@@ -100,7 +100,7 @@ static inline void setMeta(const std::string& name, uint16_t flags,
 {
     printf("Date %s to %x\n", name.c_str(), datetime);
     auto ft = msdosToFileTime(datetime);
-    printf("Date %s to %x -- %ld\n", name.c_str(), datetime, ft.time_since_epoch());
+    //printf("Date %s to %x -- %ld\n", name.c_str(), datetime, ft.time_since_epoch());
     fs::last_write_time(name, ft);
 
 #if 0

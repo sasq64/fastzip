@@ -6,7 +6,7 @@ import os;
 try :
 	print subprocess.check_output('build/fastzip infozip.zip -8 src/infozip'.split())
 	print subprocess.check_output('build/fastzip obj.zip -0 obj'.split())
-	print subprocess.check_output('build/fastzip -j -v --sign -Z infozip.zip igzip.zip src/igzip -0 -Z obj.zip fastzip=fs.stored -9 fastzip=packed/fastzip'.split())
+	print subprocess.check_output('build/fastzip -j -v --sign -Z infozip.zip igzip.zip src/igzip -0 -Z obj.zip build/fastzip=fs.stored -9 build/fastzip=packed/fastzip'.split())
 	print subprocess.check_output('unzip -lv igzip.zip'.split())
 	output = subprocess.check_output('unzip -t igzip.zip'.split())
 	if output.find('No errors detected') >= 0 :

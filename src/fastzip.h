@@ -12,18 +12,12 @@ namespace fs = std::experimental::filesystem;
 class fastzip_exception : public std::exception
 {
 public:
-    fastzip_exception(const std::exception& e) : msg(e.what()) {}
-    fastzip_exception(const char* ptr = "Fastzip Exception") : msg(ptr) {}
-    virtual const char* what() const throw() { return msg; }
+    explicit fastzip_exception(const char* ptr = "Fastzip Exception") : msg(ptr) {}
+    explicit fastzip_exception(const std::exception& e) : msg(e.what()) {}
+    const char* what() const noexcept override { return msg; }
 
 private:
     const char* msg;
-};
-
-enum
-{
-    INTEL_FAST,
-    INFOZIP
 };
 
 enum PackFormat
@@ -51,7 +45,8 @@ struct PathAlias
         if (parts.size() > 1) {
             diskPath = parts[0];
             aliasTo = parts[1];
-        }
+        } else
+			diskPath = alias;
     }
 
 	PathAlias(const char* path) : PathAlias(std::string(path)) { }
@@ -108,7 +103,7 @@ public:
     bool force64 = false;
 
     // Add a file to be packed into the target zip
-    void addZip(fs::path zipName, PackFormat format);
+    void addZip(const fs::path& zipName, PackFormat format);
     // Add a directory to be recursively packed into the target zip
     void addDir(const PathAlias& dirName, PackFormat format);
     // Run fastzip with given options and files
@@ -118,7 +113,7 @@ public:
     // stderr
     void setOuputFunction(std::function<void(const std::string)> f)
     {
-        warning = f;
+        warning = std::move(f);
     }
 
     size_t fileCount() { return fileNames.size(); }

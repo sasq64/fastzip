@@ -20,7 +20,7 @@ namespace fs = std::experimental::filesystem;
 #    include <unistd.h>
 #endif
 
-static const std::string helpText =
+static const char* helpText =
     R"(
 Fastzip v1.1 by Jonas Minnberg
 (c) 2015-2018 Unity Technologies
@@ -73,7 +73,7 @@ $   fastzip myapp.apk --sign=release.keystore,secret -Xmp4,mp3,png -j -2
     -Z packed.zip libs=lib res/* bin/classes.dex assets -0 movies
 )";
 
-static const std::vector<std::string> androidNopackExt = {
+static const char* androidNopackExt[] = {
     "jpg",  "jpeg", "png",  "gif", "wav",   "mp2",   "mp3", "ogg", "aac", "mpg",
     "mpeg", "mid",  "midi", "smf", "jet",   "rtttl", "imy", "xmf", "mp4", "m4a",
     "m4v",  "3gp",  "3gpp", "3g2", "3gpp2", "amr",   "awb", "wma", "wmv"};
@@ -91,17 +91,23 @@ static void warning(const std::string& msg)
     fflush(stdout);
 }
 
+enum PackMode
+{
+    INTEL_FAST,
+    INFOZIP
+};
+
 int main(int argc, char** argv)
 {
     if (argc < 2) {
-        puts(helpText.c_str());
+        puts(helpText);
         return 0;
     }
 
     Fastzip fastZip;
 
     int packLevel = 5;
-    int packMode = INFOZIP;
+    PackMode packMode = INFOZIP;
     fs::path destDir;
     bool extractMode = false;
     bool listFiles = false;
@@ -149,7 +155,8 @@ int main(int argc, char** argv)
                 listFiles = true;
                 extractMode = true;
             } else if (name == "apk") {
-                fastZip.storeExts = androidNopackExt;
+				fastZip.storeExts.clear();
+				fastZip.storeExts.insert(fastZip.storeExts.begin(), std::begin(androidNopackExt), std::end(androidNopackExt));
                 fastZip.doSign = true;
                 fastZip.zipAlign = true;
                 fastZip.keystoreName = HOME / "android/debug.keystore";
@@ -157,7 +164,7 @@ int main(int argc, char** argv)
             } else if (name == "early-out" || opt == 'e') {
                 fastZip.earlyOut = 98;
                 if (args.size() == 1) {
-                    fastZip.earlyOut = atoi(args[0].c_str());
+                    fastZip.earlyOut = std::stol(args[0]);
                 }
             } else if (name == "junk-paths" || opt == 'j') {
                 fastZip.junkPaths = true;
@@ -175,7 +182,7 @@ int main(int argc, char** argv)
                 fastZip.doSeq = true;
             } else if (name == "sign" || opt == 'S') {
                 fastZip.keyPassword = "fastzip";
-                if (args.size() > 0) fastZip.keystoreName = args[0];
+                if (!args.empty()) fastZip.keystoreName = args[0];
                 if (args.size() > 1) fastZip.keyPassword = args[1];
                 if (args.size() > 2) fastZip.keyName = args[2];
                 fastZip.doSign = true;
@@ -184,7 +191,7 @@ int main(int argc, char** argv)
             else if (name == "threads" || opt == 't') {
                 if (args.size() != 1)
                     error("'threads' needs exactly one argument");
-                fastZip.threadCount = atoi(args[0].c_str());
+                fastZip.threadCount = std::stol(args[0]);
             } else if (opt == 'x') {
                 extractMode = true;
             } else if (name == "destination" || opt == 'd') {
@@ -224,7 +231,7 @@ int main(int argc, char** argv)
     }
 
     if (fastZip.zipfile == "") {
-        puts(helpText.c_str());
+        puts(helpText);
         return 0;
     }
 

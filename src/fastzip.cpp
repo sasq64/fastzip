@@ -16,7 +16,7 @@
 #include <mutex>
 #include <thread>
 
-#include <assert.h>
+#include <cassert>
 
 #include <cstdio>
 #include <deque>
@@ -142,7 +142,7 @@ static PackResult intel_deflate(File& f, size_t inSize, uint8_t* buffer, size_t*
         uint64_t readBytes = inSize - inBytes;
         uint64_t writtenBytes = *outSize - stream.avail_out;
         if (readBytes) {
-            int percent = (int)(writtenBytes * 100 / readBytes);
+            auto percent = (int)(writtenBytes * 100 / readBytes);
 
             // printf("DELTA: %d\n", fileData - stream.next_out);
             if (earlyOut && (stream.next_out + IN_SIZE >= fileData)) {
@@ -210,7 +210,7 @@ void Fastzip::packZipData(File& f, int size, PackFormat inFormat, PackFormat out
 {
     // Maximum size for deflate + space for buffer
     size_t outSize = size + (size / 16383 + 1) * 5 + 64 * 1024;
-    uint8_t* outBuf = new uint8_t[outSize];
+    auto* outBuf = new uint8_t[outSize];
     // auto outBuf = std::make_unique<uint8_t[]>(outSize);
     target.store = false;
 
@@ -262,7 +262,7 @@ void Fastzip::packZipData(File& f, int size, PackFormat inFormat, PackFormat out
     target.dataSize = outSize;
 }
 
-void Fastzip::addZip(fs::path zipName, PackFormat packFormat)
+void Fastzip::addZip(const fs::path& zipName, PackFormat format)
 {
     ZipStream zs{zipName};
     for (int i = 0; i < zs.size(); i++) {
@@ -271,14 +271,14 @@ void Fastzip::addZip(fs::path zipName, PackFormat packFormat)
         ft.source = zipName;
         ft.offset = e.offset;
         ft.target = e.name;
-        ft.packFormat = packFormat;
+        ft.packFormat = format;
         fileNames.push_back(ft);
 
         strLen += ft.target.length();
     }
 }
 
-void Fastzip::addDir(const PathAlias& dirName, PackFormat packFormat)
+void Fastzip::addDir(const PathAlias& dirName, PackFormat format)
 {
 	const string& d = dirName.diskPath;
 
@@ -305,11 +305,11 @@ void Fastzip::addDir(const PathAlias& dirName, PackFormat packFormat)
     // Recursivly add all files to fileNames
     listFiles(d, [&](const string& path) {
         string target = path.substr(skipLen);
-        PackFormat pf = packFormat;
+        PackFormat pf = format;
 
-        if (storeExts.size() > 0) {
+        if (!storeExts.empty()) {
             const char* ext = nullptr;
-            auto dot = path.find_last_of(".");
+            auto dot = path.find_last_of('.');
             if (dot != string::npos) ext = &path.c_str()[dot + 1];
             if (ext && *ext) {
                 for (const auto& se : storeExts) {
@@ -324,9 +324,8 @@ void Fastzip::addDir(const PathAlias& dirName, PackFormat packFormat)
         if (dirName.aliasTo.length()) {
             target = dirName.aliasTo + target;
         }
-        for (unsigned i = 0; i < target.length(); i++) {
-            if (target[i] == '\\') target[i] = '/';
-        }
+        for (auto& t : target)
+            if (t == '\\') t = '/';
         strLen += target.length();
 
         fileNames.emplace_back(path, target, pf);
@@ -343,7 +342,7 @@ void Fastzip::exec()
 
 	std::error_code ec;
 
-    if (fileNames.size() == 0) throw fastzip_exception("No paths specified");
+    if (fileNames.empty()) throw fastzip_exception("No paths specified");
     if (fileNames.size() >= 65535) warning("More than 64K files, adding 64bit features.");
     if (zipfile == "") throw fastzip_exception("Zipfile must be specified");
 
@@ -376,7 +375,7 @@ void Fastzip::exec()
                 {
                     lock_guard<mutex> lock{m};
 
-                    if (fileNames.size() == 0) return;
+                    if (fileNames.empty()) return;
                     fileName = fileNames.front();
                     index = totalCount - fileNames.size();
                     fileNames.pop_front();
