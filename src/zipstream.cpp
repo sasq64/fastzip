@@ -67,8 +67,28 @@ ZipStream::ZipStream(const std::string& zipName) : zipName(zipName), f{zipName}
             f.Read(extra.data, extra.size);
             if (extra.id == 0x01) {
                 offset = extra.zip64.offset;
-            } else
-                printf("Ignoring extra block %04x", extra.id);
+            } else if(extra.id == 0x7875) {
+				int i = 1;
+				auto uidSize = extra.data[i++];
+				int32_t uid = 0;
+				while(uidSize > 0) {
+					uid <<= 8;
+					uid |= extra.data[i++];
+					uidSize--;
+				}
+				auto gidSize = extra.data[i++];
+				int32_t gid = 0;
+				while(gidSize > 0) {
+					gid <<= 8;
+					gid |= extra.data[i++];
+					gidSize--;
+				}
+				// TODO: Flip 
+				//printf("UID %x GID %x\n", uid, gid);
+			} else if(extra.id == 0x5455) {
+				// TODO: Read timestamps
+			} else
+                printf("**Warning: Ignoring extra block %04x\n", extra.id);
 
             exLen -= (extra.size + 4);
         }
@@ -77,7 +97,7 @@ ZipStream::ZipStream(const std::string& zipName) : zipName(zipName), f{zipName}
         auto flags = cd.attr1 >> 16;
         if ((flags & S_IFREG) == 0) // Some archives have broken attributes
             flags = 0;
-        entries.emplace_back(fileName, offset + 0, flags >> 16);
+        entries.emplace_back(fileName, offset + 0, flags);
     }
 }
 
