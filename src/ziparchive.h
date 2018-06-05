@@ -46,7 +46,7 @@ private:
     bool zipAlign = false;
     bool force64 = false;
 
-    uint8_t* entries;
+	std::unique_ptr<uint8_t[]> entries;
     uint8_t* entryPtr;
     uint64_t entryCount;
     File f;

@@ -1,6 +1,7 @@
 #pragma once
-#include <stdint.h>
-#include <time.h>
+#include <cstdint>
+#include <ctime>
+
 /*
     local file header signature     4 bytes  (0x04034b50)
       version needed to extract       2 bytes

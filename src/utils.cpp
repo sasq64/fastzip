@@ -79,7 +79,7 @@ time_t msdosToUnixTime(uint32_t m)
     t.tm_mday = (m >> 16) & 0x1f;
     t.tm_hour = (m >> 11) & 0x1f;
     t.tm_min = (m >> 5) & 0x3f;
-    t.tm_sec = m & 0x1f;
+    t.tm_sec = (m & 0x1f)<<1;
     t.tm_isdst = -1;
     return mktime(&t);
 }
