@@ -6,6 +6,17 @@
 #include <sys/stat.h>
 #include <ctime>
 
+template <int BYTES> struct getType;
+
+template <> struct getType<4> { using type = int32_t; };
+
+template <int BYTES, typename T = typename getType<BYTES>::type>
+T readBytes(uint8_t*ptr) {
+	T t = *(T*)ptr;
+	return t;
+}
+
+
 ZipStream::ZipStream(const std::string& zipName) : zipName(zipName), f{zipName}
 {
     uint32_t id = 0;
@@ -68,23 +79,22 @@ ZipStream::ZipStream(const std::string& zipName) : zipName(zipName), f{zipName}
             if (extra.id == 0x01) {
                 offset = extra.zip64.offset;
             } else if(extra.id == 0x7875) {
-				int i = 1;
-				auto uidSize = extra.data[i++];
+				auto uidSize = extra.data[1];
 				int32_t uid = 0;
 				while(uidSize > 0) {
 					uid <<= 8;
-					uid |= extra.data[i++];
+					uid |= extra.data[uidSize + 1];
 					uidSize--;
 				}
-				auto gidSize = extra.data[i++];
+				auto i = extra.data[1] + 2;
+				auto gidSize = extra.data[i];
 				int32_t gid = 0;
 				while(gidSize > 0) {
 					gid <<= 8;
-					gid |= extra.data[i++];
+					gid |= extra.data[gidSize + i];
 					gidSize--;
 				}
-				// TODO: Flip 
-				//printf("UID %x GID %x\n", uid, gid);
+				printf("UID %x GID %x\n", uid, gid);
 			} else if(extra.id == 0x5455) {
 				// TODO: Read timestamps
 			} else
