@@ -16,6 +16,19 @@ T readBytes(uint8_t*ptr) {
 	return t;
 }
 
+int64_t decodeInt(uint8_t** ptr)
+{
+	auto* data = *ptr;
+	auto sz = data[0];
+	*ptr = &data[sz+1];
+	int64_t val = 0;
+	while(sz > 0) {
+		val <<= 8;
+		val |= data[sz];
+		sz--;
+	}
+	return val;
+}
 
 ZipStream::ZipStream(const std::string& zipName) : zipName(zipName), f{zipName}
 {
@@ -79,21 +92,9 @@ ZipStream::ZipStream(const std::string& zipName) : zipName(zipName), f{zipName}
             if (extra.id == 0x01) {
                 offset = extra.zip64.offset;
             } else if(extra.id == 0x7875) {
-				auto uidSize = extra.data[1];
-				int32_t uid = 0;
-				while(uidSize > 0) {
-					uid <<= 8;
-					uid |= extra.data[uidSize + 1];
-					uidSize--;
-				}
-				auto i = extra.data[1] + 2;
-				auto gidSize = extra.data[i];
-				int32_t gid = 0;
-				while(gidSize > 0) {
-					gid <<= 8;
-					gid |= extra.data[gidSize + i];
-					gidSize--;
-				}
+				auto* ptr = &extra.data[1];
+				uint32_t uid = decodeInt(&ptr);
+				uint32_t gid = decodeInt(&ptr);
 				printf("UID %x GID %x\n", uid, gid);
 			} else if(extra.id == 0x5455) {
 				// TODO: Read timestamps
