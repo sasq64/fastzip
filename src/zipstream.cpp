@@ -6,7 +6,36 @@
 #include <ctime>
 #include <sys/stat.h>
 
-ZipStream::ZipStream(const std::string& zipName) : zipName_(zipName), f_{zipName}
+template <int BYTES> struct getType;
+
+template <> struct getType<4>
+{
+    using type = int32_t;
+};
+
+template <int BYTES, typename T = typename getType<BYTES>::type>
+T readBytes(uint8_t* ptr)
+{
+    T t = *(T*)ptr;
+    return t;
+}
+
+int64_t decodeInt(uint8_t** ptr)
+{
+    auto* data = *ptr;
+    auto sz = data[0];
+    *ptr = &data[sz + 1];
+    int64_t val = 0;
+    while (sz > 0) {
+        val <<= 8;
+        val |= data[sz];
+        sz--;
+    }
+    return val;
+}
+
+ZipStream::ZipStream(const std::string& zipName)
+    : zipName_(zipName), f_{zipName}
 {
     uint32_t id = 0;
     // Find CD by scanning backwards from end
@@ -68,8 +97,15 @@ ZipStream::ZipStream(const std::string& zipName) : zipName_(zipName), f_{zipName
             f_.Read(extra.data, extra.size);
             if (extra.id == 0x01) {
                 offset = extra.zip64.offset;
+            } else if (extra.id == 0x7875) {
+                auto* ptr = &extra.data[1];
+                uint32_t uid = decodeInt(&ptr);
+                uint32_t gid = decodeInt(&ptr);
+                printf("UID %x GID %x\n", uid, gid);
+            } else if (extra.id == 0x5455) {
+                // TODO: Read timestamps
             } else
-                printf("Ignoring extra block %04x", extra.id);
+                printf("**Warning: Ignoring extra block %04x\n", extra.id);
 
             exLen -= (extra.size + 4);
         }

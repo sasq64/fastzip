@@ -32,12 +32,13 @@ private:
     std::string msg;
 };
 
+#define IO_ERROR(x) {}
+
 class File
 {
 public:
     enum Mode
     {
-        NONE = 0,
         READ = 1,
         WRITE = 2
     };
@@ -58,20 +59,30 @@ public:
 
     static File& getStdIn()
     {
-        static File _stdin{stdin, Mode::READ};
+        static File _stdin{stdin};
         return _stdin;
     }
 
     // Constructors
 
-    File() : mode_(NONE) {}
+    File() = default;
 
-    File(FILE* fp, Mode mode) : mode_(mode), fp_(fp) {}
+    File(FILE* fp) :  fp_(fp) {}
 
-    explicit File(std::string name, const Mode mode = NONE) : name_(std::move(name))
+    explicit File(const char* name, const Mode mode = READ)
     {
-        if (mode != NONE) openAndThrow(mode);
+        openAndThrow(name, mode);
     }
+
+    explicit File(const std::string& name, const Mode mode = READ)
+	{
+		openAndThrow(name.c_str(), mode);
+	}
+
+	bool isOpen() const { return fp_ != nullptr; }
+
+	bool canWrite() { return true; }
+	bool canRead() { return true; }
 
     File(const File&) = delete;
 
@@ -80,10 +91,7 @@ public:
     File(File&& other) noexcept
     {
         fp_ = other.fp_;
-        name_ = other.name_;
-        mode_ = other.mode_;
         other.fp_ = nullptr;
-        other.mode_ = NONE;
     }
 
     // Destructor
@@ -94,16 +102,14 @@ public:
 
     template <typename T> T Read()
     {
-        openAndThrow(READ);
         T t;
         if (fread(&t, 1, sizeof(T), fp_) != sizeof(T))
-            throw io_exception("Could not read object");
+            IO_ERROR("Could not read object");
         return t;
     }
 
     template <typename T> size_t Read(T* target, size_t bytes)
     {
-        openAndThrow(READ);
         return fread(target, 1, bytes, fp_);
     }
 
@@ -115,18 +121,17 @@ public:
     std::string readLine()
     {
         std::array<char, 10> lineTarget;
-        openAndThrow(READ);
         char* ptr = fgets(&lineTarget[0], lineTarget.size(), fp_);
         if (!ptr) {
             if (feof(fp_)) return "";
-            throw io_exception();
+            IO_ERROR();
         }
         auto len = std::strlen(ptr);
         std::string result;
         while (ptr[len - 1] != '\n') {
             result += std::string{&lineTarget[0], len};
             ptr = fgets(&lineTarget[0], lineTarget.size(), fp_);
-            if (!ptr) throw io_exception();
+            if (!ptr) IO_ERROR();
             len = std::strlen(ptr);
         }
         while (len > 0 && (ptr[len - 1] == '\n' || ptr[len - 1] == '\r'))
@@ -142,26 +147,22 @@ public:
 
     template <typename T> void Write(const T& t)
     {
-        openAndThrow(WRITE);
         if (fwrite(&t, 1, sizeof(T), fp_) != sizeof(T))
-            throw io_exception("Could not write object");
+            IO_ERROR("Could not write object");
     }
 
     template <typename T> size_t Write(const T* target, size_t bytes)
     {
-        openAndThrow(WRITE);
         return fwrite(target, 1, bytes, fp_);
     }
 
     bool atEnd()
     {
-        if (mode_ == NONE) openAndThrow(READ);
         return feof(fp_);
     }
 
     void seek(int64_t pos, int whence = Seek::Set)
     {
-        if (mode_ == NONE) openAndThrow(READ);
 #ifdef _WIN32
         _fseeki64(fp_, pos, whence);
 #else
@@ -171,7 +172,6 @@ public:
 
     size_t tell()
     {
-        if (mode_ == NONE) openAndThrow(READ);
 #ifdef _WIN32
         return _ftelli64(fp_);
 #else
@@ -179,74 +179,30 @@ public:
 #endif
     }
 
-    bool isOpen() const noexcept { return mode_ != NONE; }
-
-    bool canRead() const noexcept
+    bool open(const char* name, Mode mode) noexcept
     {
-        if (mode_ != NONE) return fp_ != nullptr;
-        FILE* tmp_fp = fopen(name_.c_str(), "rb");
-        fclose(tmp_fp);
-        return tmp_fp != nullptr;
+        fp_ = fopen(name, mode == READ ? "rb" : "wb");
+		return fp_ != nullptr;
     }
 
-    bool canWrite() const noexcept
+    void openAndThrow(const char* name, Mode mode)
     {
-        if (mode_ == WRITE) return fp_ != nullptr;
-        FILE* tmp_fp = fopen(name_.c_str(), "wb");
-        fclose(tmp_fp);
-        return tmp_fp != nullptr;
-    }
-
-    OpenResult open(Mode mode) noexcept
-    {
-        if (this->mode_ == mode) return OpenResult::OK;
-        if (this->mode_ != NONE) return OpenResult::ALREADY_OPEN;
-        fp_ = fopen(name_.c_str(), mode == READ ? "rb" : "wb");
-        if (!fp_) return OpenResult::FILE_NOT_FOUND;
-        this->mode_ = mode;
-        return OpenResult::OK;
-    }
-
-    void openAndThrow(Mode mode)
-    {
-        auto result = open(mode);
-        switch (result) {
-        case OpenResult::OK: return;
-        case OpenResult::FILE_NOT_FOUND: throw file_not_found_exception(name_);
-        case OpenResult::ALREADY_OPEN:
-            throw io_exception("Can not open file in different mode");
-        }
+        if(!open(name, mode))
+            IO_ERROR();
     }
 
     void close() noexcept
     {
         if (fp_) fclose(fp_);
         fp_ = nullptr;
-        mode_ = NONE;
-    }
-
-    File dup() const
-    {
-        if (name_.empty()) {
-            auto* fp2 =
-                fdopen(::dup(fileno(fp_)), mode_ == Mode::READ ? "rb" : "wb");
-            return File{fp2, mode_};
-        }
-        File f{name_, mode_};
-        if (mode_ != NONE) f.seek(const_cast<File*>(this)->tell());
-        return f;
     }
 
     FILE* filePointer()
     {
-        if (mode_ == NONE) openAndThrow(READ);
         return fp_;
     }
 
 private:
-    std::string name_;
-    // Invariant; if mode != NONE, fp must point to a valid FILE*
-    Mode mode_ = NONE;
     FILE* fp_ = nullptr;
 };
 

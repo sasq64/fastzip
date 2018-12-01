@@ -71,8 +71,6 @@
 
 #include "deflate.h"
 
-
-
 #ifndef USE_ZLIB
 
 /* ===========================================================================
@@ -87,11 +85,9 @@
  * is still correct, and might even be smaller in some cases.
  */
 
-
 /* ===========================================================================
  * Local data used by the "longest match" routines.
  */
-
 
 /* ===========================================================================
  * Initialize the "longest match" routines for a new file
@@ -116,37 +112,37 @@ void IZDeflate::lm_init (int pack_level, ush *a_flags)
     sliding = 0;
     if (window_size == 0L) {
         sliding = 1;
-        window_size = (ulg)2L*WSIZE;
+        window_size = (ulg)2L * WSIZE;
     }
 
     /* Use dynamic allocation if compiler does not like big static arrays: */
-#ifdef DYN_ALLOC
+#    ifdef DYN_ALLOC
     if (window == NULL) {
-        window = (uch *) zcalloc(WSIZE,   2*sizeof(uch));
+        window = (uch*)zcalloc(WSIZE, 2 * sizeof(uch));
         if (window == NULL) ziperr(ZE_MEM, "window allocation");
     }
     if (prev == NULL) {
-        prev   = (Pos *) zcalloc(WSIZE,     sizeof(Pos));
-        head   = (Pos *) zcalloc(HASH_SIZE, sizeof(Pos));
+        prev = (Pos*)zcalloc(WSIZE, sizeof(Pos));
+        head = (Pos*)zcalloc(HASH_SIZE, sizeof(Pos));
         if (prev == NULL || head == NULL) {
             ziperr(ZE_MEM, "hash table allocation");
         }
     }
-#endif /* DYN_ALLOC */
+#    endif /* DYN_ALLOC */
 
     /* Initialize the hash table (avoiding 64K overflow for 16 bit systems).
      * prev[] will be initialized on the fly.
      */
-    head[HASH_SIZE-1] = NIL;
-    memset((char*)head, NIL, (unsigned)(HASH_SIZE-1)*sizeof(*head));
+    head[HASH_SIZE - 1] = NIL;
+    memset((char*)head, NIL, (unsigned)(HASH_SIZE - 1) * sizeof(*head));
 
     /* Set the default configuration parameters:
      */
-    max_lazy_match   = configuration_table[pack_level].max_lazy;
-    good_match       = configuration_table[pack_level].good_length;
-#ifndef FULL_SEARCH
-    nice_match       = configuration_table[pack_level].nice_length;
-#endif
+    max_lazy_match = configuration_table[pack_level].max_lazy;
+    good_match = configuration_table[pack_level].good_length;
+#    ifndef FULL_SEARCH
+    nice_match = configuration_table[pack_level].nice_length;
+#    endif
     max_chain_length = configuration_table[pack_level].max_chain;
     if (pack_level <= 2) {
        *a_flags |= FAST;
@@ -157,19 +153,19 @@ void IZDeflate::lm_init (int pack_level, ush *a_flags)
 
     strstart = 0;
     block_start = 0L;
-#if defined(ASMV) && !defined(RISCOS)
+#    if defined(ASMV) && !defined(RISCOS)
     match_init(); /* initialize the asm code */
-#endif
+#    endif
 
     j = WSIZE;
-#ifndef MAXSEG_64K
+#    ifndef MAXSEG_64K
     if (sizeof(int) > 2) j <<= 1; /* Can read 64K in one step */
-#endif
+#    endif
     lookahead = (*read_buf)(read_handle, (char*)window, j);
 
     if (lookahead == 0 || lookahead == (unsigned)EOF) {
-       eofile = 1, lookahead = 0;
-       return;
+        eofile = 1, lookahead = 0;
+        return;
     }
     eofile = 0;
     /* Make sure that we always have enough lookahead. This is important
@@ -178,7 +174,8 @@ void IZDeflate::lm_init (int pack_level, ush *a_flags)
     if (lookahead < MIN_LOOKAHEAD) fill_window();
 
     ins_h = 0;
-    for (j=0; j<MIN_MATCH-1; j++) UPDATE_HASH(ins_h, window[j]);
+    for (j = 0; j < MIN_MATCH - 1; j++)
+        UPDATE_HASH(ins_h, window[j]);
     /* If lookahead < MIN_MATCH, ins_h is garbage, but this is
      * not important since only literal bytes will be emitted.
      */
@@ -189,7 +186,7 @@ void IZDeflate::lm_init (int pack_level, ush *a_flags)
  */
 void IZDeflate::lm_free()
 {
-#ifdef DYN_ALLOC
+#    ifdef DYN_ALLOC
     if (window != NULL) {
         zcfree(window);
         window = NULL;
@@ -199,7 +196,7 @@ void IZDeflate::lm_free()
         zcfree(head);
         prev = head = NULL;
     }
-#endif /* DYN_ALLOC */
+#    endif /* DYN_ALLOC */
 }
 
 /* ===========================================================================
@@ -210,19 +207,19 @@ void IZDeflate::lm_free()
  * IN assertions: cur_match is the head of the hash chain for the current
  *   string (strstart) and its distance is <= MAX_DIST, and prev_length >= 1
  */
-#ifndef ASMV
+#    ifndef ASMV
 /* For 80x86 and 680x0 and ARM, an optimized version is in match.asm or
  * match.S. The code is functionally equivalent, so you can use the C version
  * if desired.
  */
 int IZDeflate::longest_match(IPos cur_match)
-    //IPos cur_match;                             /* current match */
+// IPos cur_match;                             /* current match */
 {
-    unsigned chain_length = max_chain_length;   /* max hash chain length */
-    uch *scan = window + strstart; /* current string */
-    uch *match;                    /* matched string */
-    int len;                           /* length of current match */
-    int best_len = prev_length;                 /* best match length so */
+    unsigned chain_length = max_chain_length; /* max hash chain length */
+    uch* scan = window + strstart;            /* current string */
+    uch* match;                               /* matched string */
+    int len;                                  /* length of current match */
+    int best_len = prev_length;               /* best match length so */
     IPos limit = strstart > (IPos)MAX_DIST ? strstart - (IPos)MAX_DIST : NIL;
     /* Stop when cur_match becomes <= limit. To simplify the code,
      * we prevent matches with the string of window index 0.
@@ -231,29 +228,30 @@ int IZDeflate::longest_match(IPos cur_match)
 /* The code is optimized for HASH_BITS >= 8 and MAX_MATCH-2 multiple of 16.
  * It is easy to get rid of this optimization if necessary.
  */
-#if HASH_BITS < 8 || MAX_MATCH != 258
-   error: Code too clever
-#endif
+#        if HASH_BITS < 8 || MAX_MATCH != 258
+error:
+    Code too clever
+#        endif
 
-#ifdef UNALIGNED_OK
-    /* Compare two bytes at a time. Note: this is not always beneficial.
-     * Try with and without -DUNALIGNED_OK to check.
-     */
-    uch *strend = window + strstart + MAX_MATCH - 1;
-    ush scan_start = *(ush *)scan;
-    ush scan_end   = *(ush *)(scan+best_len-1);
-#else
-    uch *strend = window + strstart + MAX_MATCH;
-    uch scan_end1  = scan[best_len-1];
-    uch scan_end   = scan[best_len];
-#endif
+#        ifdef UNALIGNED_OK
+        /* Compare two bytes at a time. Note: this is not always beneficial.
+         * Try with and without -DUNALIGNED_OK to check.
+         */
+        uch* strend = window + strstart + MAX_MATCH - 1;
+    ush scan_start = *(ush*)scan;
+    ush scan_end = *(ush*)(scan + best_len - 1);
+#        else
+    uch* strend = window + strstart + MAX_MATCH;
+    uch scan_end1 = scan[best_len - 1];
+    uch scan_end = scan[best_len];
+#        endif
 
     /* Do not waste too much time if we already have a good match: */
     if (prev_length >= good_match) {
         chain_length >>= 2;
     }
 
-    Assert(strstart <= window_size-MIN_LOOKAHEAD, "insufficient lookahead");
+    Assert(strstart <= window_size - MIN_LOOKAHEAD, "insufficient lookahead");
 
     do {
         Assert(cur_match < strstart, "no future");
@@ -262,12 +260,13 @@ int IZDeflate::longest_match(IPos cur_match)
         /* Skip to next match if the match length cannot increase
          * or if the match length is less than 2:
          */
-#if (defined(UNALIGNED_OK) && MAX_MATCH == 258)
+#        if (defined(UNALIGNED_OK) && MAX_MATCH == 258)
         /* This code assumes sizeof(unsigned short) == 2. Do not use
          * UNALIGNED_OK if your compiler uses a different size.
          */
-        if (*(ush *)(match+best_len-1) != scan_end ||
-            *(ush *)match != scan_start) continue;
+        if (*(ush*)(match + best_len - 1) != scan_end ||
+            *(ush*)match != scan_start)
+            continue;
 
         /* It is not necessary to compare scan[2] and match[2] since they are
          * always equal when the other bytes match, given that the hash keys
@@ -280,26 +279,24 @@ int IZDeflate::longest_match(IPos cur_match)
          */
         scan++, match++;
         do {
-        } while (*(ush *)(scan+=2) == *(ush *)(match+=2) &&
-                 *(ush *)(scan+=2) == *(ush *)(match+=2) &&
-                 *(ush *)(scan+=2) == *(ush *)(match+=2) &&
-                 *(ush *)(scan+=2) == *(ush *)(match+=2) &&
-                 scan < strend);
+        } while (*(ush*)(scan += 2) == *(ush*)(match += 2) &&
+                 *(ush*)(scan += 2) == *(ush*)(match += 2) &&
+                 *(ush*)(scan += 2) == *(ush*)(match += 2) &&
+                 *(ush*)(scan += 2) == *(ush*)(match += 2) && scan < strend);
         /* The funny "do {}" generates better code on most compilers */
 
         /* Here, scan <= window+strstart+257 */
-        Assert(scan <= window+(unsigned)(window_size-1), "wild scan");
+        Assert(scan <= window + (unsigned)(window_size - 1), "wild scan");
         if (*scan == *match) scan++;
 
-        len = (MAX_MATCH - 1) - (int)(strend-scan);
-        scan = strend - (MAX_MATCH-1);
+        len = (MAX_MATCH - 1) - (int)(strend - scan);
+        scan = strend - (MAX_MATCH - 1);
 
-#else /* UNALIGNED_OK */
+#        else /* UNALIGNED_OK */
 
-        if (match[best_len]   != scan_end  ||
-            match[best_len-1] != scan_end1 ||
-            *match            != *scan     ||
-            *++match          != scan[1])      continue;
+        if (match[best_len] != scan_end || match[best_len - 1] != scan_end1 ||
+            *match != *scan || *++match != scan[1])
+            continue;
 
         /* The check at best_len-1 can be removed because it will be made
          * again later. (This heuristic is not always a win.)
@@ -317,70 +314,71 @@ int IZDeflate::longest_match(IPos cur_match)
         } while (*++scan == *++match && *++scan == *++match &&
                  *++scan == *++match && *++scan == *++match &&
                  *++scan == *++match && *++scan == *++match &&
-                 *++scan == *++match && *++scan == *++match &&
-                 scan < strend);
+                 *++scan == *++match && *++scan == *++match && scan < strend);
 
-        Assert(scan <= window+(unsigned)(window_size-1), "wild scan");
+        Assert(scan <= window + (unsigned)(window_size - 1), "wild scan");
 
         len = MAX_MATCH - (int)(strend - scan);
         scan = strend - MAX_MATCH;
 
-#endif /* UNALIGNED_OK */
+#        endif /* UNALIGNED_OK */
 
         if (len > best_len) {
             match_start = cur_match;
             best_len = len;
             if (len >= nice_match) break;
-#ifdef UNALIGNED_OK
-            scan_end = *(ush *)(scan+best_len-1);
-#else
-            scan_end1  = scan[best_len-1];
-            scan_end   = scan[best_len];
-#endif
+#        ifdef UNALIGNED_OK
+            scan_end = *(ush*)(scan + best_len - 1);
+#        else
+            scan_end1 = scan[best_len - 1];
+            scan_end = scan[best_len];
+#        endif
         }
-    } while ((cur_match = prev[cur_match & WMASK]) > limit
-             && --chain_length != 0);
+    } while ((cur_match = prev[cur_match & WMASK]) > limit &&
+             --chain_length != 0);
 
     return best_len;
 }
-#endif /* ASMV */
+#    endif /* ASMV */
 
-#ifdef DEBUG
+#    ifdef DEBUG
 /* ===========================================================================
  * Check that the match at match_start is indeed a match.
  */
 static void check_match(IPos start, IPos match, int length)
-    //IPos start, match;
-    //int length;
+// IPos start, match;
+// int length;
 {
     /* check that the match is indeed a match */
-    if (memcmp((char*)window + match,
-                (char*)window + start, length) != EQUAL) {
-        fprintf(mesg,
-            " start %d, match %d, length %d\n",
-            start, match, length);
+    if (memcmp((char*)window + match, (char*)window + start, length) != EQUAL) {
+        fprintf(mesg, " start %d, match %d, length %d\n", start, match, length);
         error("invalid match");
     }
     if (verbose > 1) {
-        fprintf(mesg,"\\[%d,%d]", start-match, length);
-#ifndef WINDLL
-        do { putc(window[start++], mesg); } while (--length != 0);
-#else
-        do { fprintf(stdout,"%c",window[start++]); } while (--length != 0);
-#endif
+        fprintf(mesg, "\\[%d,%d]", start - match, length);
+#        ifndef WINDLL
+        do {
+            putc(window[start++], mesg);
+        } while (--length != 0);
+#        else
+        do {
+            fprintf(stdout, "%c", window[start++]);
+        } while (--length != 0);
+#        endif
     }
 }
-#else
-#  define check_match(start, match, length)
-#endif
+#    else
+#        define check_match(start, match, length)
+#    endif
 
 /* ===========================================================================
  * Flush the current block, with given end-of-file flag.
  * IN assertion: strstart is set to the end of the current match.
  */
-#define FLUSH_BLOCK(eof) \
-   flush_block(block_start >= 0L ? (char*)&window[(unsigned)block_start] : \
-                (char*)NULL, (ulg)strstart - (ulg)block_start, (eof))
+#    define FLUSH_BLOCK(eof)                                                   \
+        flush_block(block_start >= 0L ? (char*)&window[(unsigned)block_start]  \
+                                      : (char*)NULL,                           \
+                    (ulg)strstart - (ulg)block_start, (eof))
 
 /* ===========================================================================
  * Fill the window when the lookahead becomes insufficient.
@@ -394,7 +392,7 @@ static void check_match(IPos start, IPos match, int length)
 void IZDeflate::fill_window()
 {
     unsigned n, m;
-    unsigned more;    /* Amount of free space at the end of the window. */
+    unsigned more; /* Amount of free space at the end of the window. */
 
     do {
         more = (unsigned)(window_size - (ulg)lookahead - (ulg)strstart);
@@ -408,34 +406,35 @@ void IZDeflate::fill_window()
              */
             more--;
 
-        /* For MMAP or BIG_MEM, the whole input file is already in memory so
-         * we must not perform sliding. We must however call (*read_buf)() in
-         * order to compute the crc, update lookahead and possibly set eofile.
-         */
-        } else if (strstart >= WSIZE+MAX_DIST && sliding) {
+            /* For MMAP or BIG_MEM, the whole input file is already in memory so
+             * we must not perform sliding. We must however call (*read_buf)()
+             * in order to compute the crc, update lookahead and possibly set
+             * eofile.
+             */
+        } else if (strstart >= WSIZE + MAX_DIST && sliding) {
 
-#ifdef FORCE_METHOD
+#    ifdef FORCE_METHOD
             /* When methods "stored" or "store_block" are requested, the
              * current block must be flushed before sliding the window.
              */
             if (level <= 2) FLUSH_BLOCK(0), block_start = strstart;
-#endif
+#    endif
             /* By the IN assertion, the window is not empty so we can't confuse
              * more == 0 with more == 64K on a 16 bit machine.
              */
-            memcpy((char*)window, (char*)window+WSIZE, (unsigned)WSIZE);
+            memcpy((char*)window, (char*)window + WSIZE, (unsigned)WSIZE);
             match_start -= WSIZE;
-            strstart    -= WSIZE; /* we now have strstart >= MAX_DIST: */
+            strstart -= WSIZE; /* we now have strstart >= MAX_DIST: */
 
-            block_start -= (long) WSIZE;
+            block_start -= (long)WSIZE;
 
             for (n = 0; n < HASH_SIZE; n++) {
                 m = head[n];
-                head[n] = (Pos)(m >= WSIZE ? m-WSIZE : NIL);
+                head[n] = (Pos)(m >= WSIZE ? m - WSIZE : NIL);
             }
             for (n = 0; n < WSIZE; n++) {
                 m = prev[n];
-                prev[n] = (Pos)(m >= WSIZE ? m-WSIZE : NIL);
+                prev[n] = (Pos)(m >= WSIZE ? m - WSIZE : NIL);
                 /* If n is not on any hash chain, prev[n] is garbage but
                  * its value will never be used.
                  */
@@ -457,7 +456,8 @@ void IZDeflate::fill_window()
          */
         Assert(more >= 2, "more < 2");
 
-        n = (*read_buf)(read_handle, (char*)window+strstart+lookahead, more);
+        n = (*read_buf)(read_handle, (char*)window + strstart + lookahead,
+                        more);
         if (n == 0 || n == (unsigned)EOF) {
             eofile = 1;
         } else {
@@ -474,19 +474,19 @@ void IZDeflate::fill_window()
  */
 uzoff_t IZDeflate::deflate_fast()
 {
-    IPos hash_head = NIL;       /* head of the hash chain */
-    int flush;                  /* set if current block must be flushed */
-    unsigned match_length = 0;  /* length of best match */
+    IPos hash_head = NIL;      /* head of the hash chain */
+    int flush;                 /* set if current block must be flushed */
+    unsigned match_length = 0; /* length of best match */
 
-    prev_length = MIN_MATCH-1;
+    prev_length = MIN_MATCH - 1;
     while (lookahead != 0) {
         /* Insert the string window[strstart .. strstart+2] in the
          * dictionary, and set hash_head to the head of the hash chain:
          */
-#ifndef DEFL_UNDETERM
+#    ifndef DEFL_UNDETERM
         if (lookahead >= MIN_MATCH)
-#endif
-        INSERT_STRING(strstart, hash_head);
+#    endif
+            INSERT_STRING(strstart, hash_head);
 
         /* Find the longest match, discarding those <= prev_length.
          * At this point we have always match_length < MIN_MATCH
@@ -496,22 +496,22 @@ uzoff_t IZDeflate::deflate_fast()
              * of window index 0 (in particular we have to avoid a match
              * of the string with itself at the start of the input file).
              */
-#ifndef HUFFMAN_ONLY
-#  ifndef DEFL_UNDETERM
+#    ifndef HUFFMAN_ONLY
+#        ifndef DEFL_UNDETERM
             /* Do not look for matches beyond the end of the input.
              * This is necessary to make deflate deterministic.
              */
             if ((unsigned)nice_match > lookahead) nice_match = (int)lookahead;
-#  endif
-            match_length = longest_match (hash_head);
+#        endif
+            match_length = longest_match(hash_head);
             /* longest_match() sets match_start */
             if (match_length > lookahead) match_length = lookahead;
-#endif
+#    endif
         }
         if (match_length >= MIN_MATCH) {
             check_match(strstart, match_start, match_length);
 
-            flush = ct_tally(strstart-match_start, match_length - MIN_MATCH);
+            flush = ct_tally(strstart - match_start, match_length - MIN_MATCH);
 
             lookahead -= match_length;
 
@@ -519,10 +519,10 @@ uzoff_t IZDeflate::deflate_fast()
              * is not too large. This saves time but degrades compression.
              */
             if (match_length <= max_insert_length
-#ifndef DEFL_UNDETERM
+#    ifndef DEFL_UNDETERM
                 && lookahead >= MIN_MATCH
-#endif
-                                                 ) {
+#    endif
+            ) {
                 match_length--; /* string at strstart already in hash table */
                 do {
                     strstart++;
@@ -530,27 +530,27 @@ uzoff_t IZDeflate::deflate_fast()
                     /* strstart never exceeds WSIZE-MAX_MATCH, so there are
                      * always MIN_MATCH bytes ahead.
                      */
-#ifdef DEFL_UNDETERM
+#    ifdef DEFL_UNDETERM
                     /* If lookahead < MIN_MATCH these bytes are garbage,
                      * but it does not matter since the next lookahead bytes
                      * will be emitted as literals.
                      */
-#endif
+#    endif
                 } while (--match_length != 0);
                 strstart++;
             } else {
                 strstart += match_length;
                 match_length = 0;
                 ins_h = window[strstart];
-                UPDATE_HASH(ins_h, window[strstart+1]);
-#if MIN_MATCH != 3
-                Call UPDATE_HASH() MIN_MATCH-3 more times
-#endif
+                UPDATE_HASH(ins_h, window[strstart + 1]);
+#    if MIN_MATCH != 3
+                Call UPDATE_HASH() MIN_MATCH - 3 more times
+#    endif
             }
         } else {
             /* No match, output a literal byte */
-            Tracevv((stderr,"%c",window[strstart]));
-            flush = ct_tally (0, window[strstart]);
+            Tracevv((stderr, "%c", window[strstart]));
+            flush = ct_tally(0, window[strstart]);
             lookahead--;
             strstart++;
         }
@@ -573,14 +573,14 @@ uzoff_t IZDeflate::deflate_fast()
  */
 uzoff_t IZDeflate::deflate()
 {
-    IPos hash_head = NIL;       /* head of hash chain */
-    IPos prev_match;            /* previous match */
-    int flush;                  /* set if current block must be flushed */
-    int match_available = 0;    /* set if previous match exists */
-    unsigned match_length = MIN_MATCH-1; /* length of best match */
-#ifdef DEBUG
-    extern uzoff_t isize;       /* byte length of input file, for debug only */
-#endif
+    IPos hash_head = NIL;    /* head of hash chain */
+    IPos prev_match;         /* previous match */
+    int flush;               /* set if current block must be flushed */
+    int match_available = 0; /* set if previous match exists */
+    unsigned match_length = MIN_MATCH - 1; /* length of best match */
+#    ifdef DEBUG
+    extern uzoff_t isize; /* byte length of input file, for debug only */
+#    endif
 
     if (level <= 3) return deflate_fast(); /* optimized for speed */
 
@@ -589,15 +589,15 @@ uzoff_t IZDeflate::deflate()
         /* Insert the string window[strstart .. strstart+2] in the
          * dictionary, and set hash_head to the head of the hash chain:
          */
-#ifndef DEFL_UNDETERM
+#    ifndef DEFL_UNDETERM
         if (lookahead >= MIN_MATCH)
-#endif
-        INSERT_STRING(strstart, hash_head);
+#    endif
+            INSERT_STRING(strstart, hash_head);
 
         /* Find the longest match, discarding those <= prev_length.
          */
         prev_length = match_length, prev_match = match_start;
-        match_length = MIN_MATCH-1;
+        match_length = MIN_MATCH - 1;
 
         if (hash_head != NIL && prev_length < max_lazy_match &&
             strstart - hash_head <= MAX_DIST) {
@@ -605,49 +605,50 @@ uzoff_t IZDeflate::deflate()
              * of window index 0 (in particular we have to avoid a match
              * of the string with itself at the start of the input file).
              */
-#ifndef HUFFMAN_ONLY
-#  ifndef DEFL_UNDETERM
+#    ifndef HUFFMAN_ONLY
+#        ifndef DEFL_UNDETERM
             /* Do not look for matches beyond the end of the input.
              * This is necessary to make deflate deterministic.
              */
             if ((unsigned)nice_match > lookahead) nice_match = (int)lookahead;
-#  endif
-            match_length = longest_match (hash_head);
+#        endif
+            match_length = longest_match(hash_head);
             /* longest_match() sets match_start */
             if (match_length > lookahead) match_length = lookahead;
-#endif
+#    endif
 
-#ifdef FILTERED
+#    ifdef FILTERED
             /* Ignore matches of length <= 5 */
             if (match_length <= 5) {
-#else
+#    else
             /* Ignore a length 3 match if it is too distant: */
-            if (match_length == MIN_MATCH && strstart-match_start > TOO_FAR){
-#endif
+            if (match_length == MIN_MATCH && strstart - match_start > TOO_FAR) {
+#    endif
                 /* If prev_match is also MIN_MATCH, match_start is garbage
                  * but we will ignore the current match anyway.
                  */
-                match_length = MIN_MATCH-1;
+                match_length = MIN_MATCH - 1;
             }
         }
         /* If there was a match at the previous step and the current
          * match is not better, output the previous match:
          */
         if (prev_length >= MIN_MATCH && match_length <= prev_length) {
-#ifndef DEFL_UNDETERM
+#    ifndef DEFL_UNDETERM
             unsigned max_insert = strstart + lookahead - MIN_MATCH;
 
-#endif
-            check_match(strstart-1, prev_match, prev_length);
+#    endif
+            check_match(strstart - 1, prev_match, prev_length);
 
-            flush = ct_tally(strstart-1-prev_match, prev_length - MIN_MATCH);
+            flush =
+                ct_tally(strstart - 1 - prev_match, prev_length - MIN_MATCH);
 
             /* Insert in hash table all strings up to the end of the match.
              * strstart-1 and strstart are already inserted.
              */
-            lookahead -= prev_length-1;
+            lookahead -= prev_length - 1;
             prev_length -= 2;
-#ifndef DEFL_UNDETERM
+#    ifndef DEFL_UNDETERM
             do {
                 if (++strstart <= max_insert) {
                     INSERT_STRING(strstart, hash_head);
@@ -657,7 +658,7 @@ uzoff_t IZDeflate::deflate()
                 }
             } while (--prev_length != 0);
             strstart++;
-#else /* DEFL_UNDETERM */
+#    else  /* DEFL_UNDETERM */
             do {
                 strstart++;
                 INSERT_STRING(strstart, hash_head);
@@ -668,9 +669,9 @@ uzoff_t IZDeflate::deflate()
                  */
             } while (--prev_length != 0);
             strstart++;
-#endif /* ?DEFL_UNDETERM */
+#    endif /* ?DEFL_UNDETERM */
             match_available = 0;
-            match_length = MIN_MATCH-1;
+            match_length = MIN_MATCH - 1;
 
             if (flush) FLUSH_BLOCK(0), block_start = strstart;
 
@@ -679,8 +680,8 @@ uzoff_t IZDeflate::deflate()
              * single literal. If there was a match but the current match
              * is longer, truncate the previous match to a single literal.
              */
-            Tracevv((stderr,"%c",window[strstart-1]));
-            if (ct_tally (0, window[strstart-1])) {
+            Tracevv((stderr, "%c", window[strstart - 1]));
+            if (ct_tally(0, window[strstart - 1])) {
                 FLUSH_BLOCK(0), block_start = strstart;
             }
             strstart++;
@@ -702,7 +703,7 @@ uzoff_t IZDeflate::deflate()
          */
         if (lookahead < MIN_LOOKAHEAD) fill_window();
     }
-    if (match_available) ct_tally (0, window[strstart-1]);
+    if (match_available) ct_tally(0, window[strstart - 1]);
 
     return FLUSH_BLOCK(1); /* eof */
 }

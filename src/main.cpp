@@ -145,9 +145,10 @@ int main(int argc, char** argv)
             if (isdigit(opt)) {
                 packLevel = opt - '0';
                 if (packLevel > 0) packMode = INFOZIP;
-            } else if (opt == 'z' || name == "zip")
-                packMode = INFOZIP;
+			}
 #ifdef WITH_INTEL
+            else if (opt == 'z' || name == "zip")
+                packMode = INFOZIP;
             else if (opt == 'I' || name == "intel")
                 packMode = INTEL_FAST;
 #endif
@@ -155,11 +156,13 @@ int main(int argc, char** argv)
                 listFiles = true;
                 extractMode = true;
             } else if (name == "apk") {
-				fastZip.storeExts.clear();
-				fastZip.storeExts.insert(fastZip.storeExts.begin(), std::begin(androidNopackExt), std::end(androidNopackExt));
+                fastZip.storeExts.clear();
+                fastZip.storeExts.insert(fastZip.storeExts.begin(),
+                                         std::begin(androidNopackExt),
+                                         std::end(androidNopackExt));
                 fastZip.doSign = true;
                 fastZip.zipAlign = true;
-                fastZip.keystoreName = HOME / "android/debug.keystore";
+                fastZip.keystoreName = HOME / "android" / "debug.keystore";
                 fastZip.keyPassword = "android";
             } else if (name == "early-out" || opt == 'e') {
                 fastZip.earlyOut = 98;
@@ -169,7 +172,13 @@ int main(int argc, char** argv)
             } else if (name == "junk-paths" || opt == 'j') {
                 fastZip.junkPaths = true;
             } else if (name == "add-zip" || opt == 'Z') {
-                std::string zipName = argv[++i];
+                std::string zipName;
+                if (!args.empty())
+                    zipName = args[0];
+                else if ((i + 1) < argc && argv[i + 1][0] != '-')
+                    zipName = argv[++i];
+                else
+                    error("No zipfile provided");
                 if (fileExists(zipName)) {
                     fastZip.addZip(zipName, packFormat());
                 } else
@@ -195,7 +204,12 @@ int main(int argc, char** argv)
             } else if (opt == 'x') {
                 extractMode = true;
             } else if (name == "destination" || opt == 'd') {
-                destDir = argv[++i];
+                if (!args.empty())
+                    destDir = args[0];
+                else if ((i + 1) < argc && argv[i + 1][0] != '-')
+                    destDir = argv[++i];
+                else
+                    error("No destination directory provided");
             } else if (name == "zip64") {
                 fastZip.force64 = true;
             } else if (name == "help" || opt == 'h') {
@@ -226,16 +240,13 @@ int main(int argc, char** argv)
         } else {
             fastZip.junkPaths = true;
             fastZip.addDir(fastZip.zipfile, packFormat());
-		    fastZip.zipfile = fastZip.zipfile.replace_extension(".zip");
+            fastZip.zipfile = fastZip.zipfile.replace_extension(".zip");
         }
     }
 
     if (fastZip.zipfile == "") {
         puts(helpText);
-        return 0;
-    }
-
-    if (extractMode) {
+    } else if (extractMode) {
         FUnzip fuz;
         fuz.zipName = fastZip.zipfile;
         fuz.threadCount = fastZip.threadCount;
@@ -247,13 +258,13 @@ int main(int argc, char** argv)
         } catch (funzip_exception& e) {
             error(e.what());
         }
-        return 0;
-    }
+    } else {
 
-    try {
-        fastZip.exec();
-    } catch (fastzip_exception& e) {
-        error(e.what());
+        try {
+            fastZip.exec();
+        } catch (fastzip_exception& e) {
+            error(e.what());
+        }
     }
 
     return 0;

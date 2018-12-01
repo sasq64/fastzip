@@ -13,6 +13,8 @@
 #include <cstring>
 #include <string>
 #include <vector>
+#include <iostream>
+#include <iomanip>
 
 #include <experimental/filesystem>
 #include <sys/stat.h>
@@ -109,10 +111,19 @@ static inline void setMeta(const std::string& name,
                            [[maybe_unused]] int gid,
                            [[maybe_unused]] bool link = false)
 {
-    printf("Date %s to %x\n", name.c_str(), datetime);
-    auto ft = msdosToFileTime(datetime);
-    // printf("Date %s to %x -- %ld\n", name.c_str(), datetime,
-    // ft.time_since_epoch());
+
+	if(flags) {
+		fs::perms p = (fs::perms)flags;
+		fs::permissions(name, p);
+	}
+
+    //printf("%s : Data %x / Flags %x\n", name.c_str(), datetime, flags);
+    auto tt = msdosToUnixTime(datetime);
+ 	//std::tm tm = *std::localtime(&tt);
+	//std::cout << std::put_time(&tm, "%c%n");
+
+
+    auto ft = fs::file_time_type::clock::from_time_t(tt);
     fs::last_write_time(name, ft);
 
 #if 0
@@ -207,11 +218,13 @@ void FUnzip::exec()
                     std::lock_guard<std::mutex> lock(lm);
                     links.push_back(en);
                     continue;
-                }
+				}
+                
                 if ((e.flags & S_IFDIR) == S_IFDIR ||
                     e.name[e.name.length() - 1] == '/') {
                     std::lock_guard<std::mutex> lock(lm);
                     dirs.push_back(en);
+					if (!fileExists(e.name)) makedirs(e.name);
                     continue;
                 }
 
@@ -230,8 +243,7 @@ void FUnzip::exec()
                 if (dname != "" && !fileExists(dname))
                     makedirs(dname);
 
-                if (verbose)
-                    printf("%s\n", name.c_str());
+                if (verbose) { printf("%s\n", name.c_str()); fflush(stdout); }
                 // printf("%s %x %s %s\n", fileName, a, (a & S_IFDIR)  ==
                 // S_IFDIR ? "DIR" : "", (a & S_IFLNK) == S_IFLNK ? "LINK" :
                 // "");
@@ -248,6 +260,7 @@ void FUnzip::exec()
                     copyfile(fout, uncompSize, f);
                 else
                     uncompress(fout, compSize, f);
+				fout.close();
                 setMeta(name, e.flags, le.dateTime, uid, gid);
             }
         });

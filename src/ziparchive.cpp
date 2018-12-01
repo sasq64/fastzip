@@ -5,19 +5,14 @@
 #include "file.h"
 
 #include <cassert>
-#include <sys/stat.h>
 #include <ctime>
+#include <sys/stat.h>
 
 ZipArchive::ZipArchive(const std::string& fileName, int numFiles, int strLen)
     : f{fileName, File::WRITE}
 {
     static_assert(sizeof(LocalEntry) == 30);
     static_assert(sizeof(CentralDirEntry) == 46);
-    // fp = fopen(fileName.c_str(), "wb");
-
-    // printf("Reserving space for %d files in %d bytes = %ld total\n", numFiles, strLen,
-    // strLen
-    // + numFiles * sizeof(CentralDirEntry));
 
     entries =
         std::make_unique<uint8_t[]>(strLen + numFiles * (sizeof(CentralDirEntry) + sizeof(Extra64)));
@@ -25,8 +20,9 @@ ZipArchive::ZipArchive(const std::string& fileName, int numFiles, int strLen)
     entryCount = 0;
 }
 
-void ZipArchive::addFile(const std::string& fileName, bool store, uint64_t compSize,
-                         uint64_t uncompSize, time_t ts, uint32_t crc, uint16_t flags)
+void ZipArchive::addFile(const std::string& fileName, bool store,
+                         uint64_t compSize, uint64_t uncompSize, time_t ts,
+                         uint32_t crc, uint16_t flags)
 {
     ZipEntry ze;
     ze.data = nullptr;
@@ -51,8 +47,8 @@ void ZipArchive::add(const ZipEntry& entry)
     // date:   YYYYYYYM MMMDDDDD
     // time:   HHHHHMMM MMMSSSSS
     uint32_t msdos_ts = ((lt->tm_year - 80) << 25) | ((lt->tm_mon + 1) << 21) |
-                        (lt->tm_mday << 16) | (lt->tm_hour << 11) | (lt->tm_min << 5) |
-                        (lt->tm_sec >> 1);
+                        (lt->tm_mday << 16) | (lt->tm_hour << 11) |
+                        (lt->tm_min << 5) | (lt->tm_sec >> 1);
 
     lastHeader = f.tell(); // ftell_x(fp);
 
@@ -61,8 +57,8 @@ void ZipArchive::add(const ZipEntry& entry)
 
     bool ext64 = force64;
     if (!ext64)
-        ext64 = (entry.dataSize > 0xfffffffe || entry.originalSize > 0xfffffffe ||
-                 lastHeader > 0xfffffffeL);
+        ext64 = (entry.dataSize > 0xfffffffe ||
+                 entry.originalSize > 0xfffffffe || lastHeader > 0xfffffffeL);
 
     memset(e, 0, sizeof(CentralDirEntry));
     e->sig = 0x02014b50;
@@ -140,17 +136,9 @@ void ZipArchive::close()
     }
 
     if (end64) {
-        EndOfCentralDir64 eod64 = {0x06064b50,
-                                   44,
-                                   0x031e,
-                                   45,
-                                   0,
-                                   0,
-                                   entryCount,
-                                   entryCount,
-                                   (int64_t)sizeCD,
-                                   (int64_t)startCD};
-        write(eod64);
+        write<EndOfCentralDir64>({0x06064b50, 44, 0x031e, 45, 0, 0, entryCount,
+                                  entryCount, (int64_t)sizeCD,
+                                  (int64_t)startCD});
         // Locator
         write<uint32_t>(0x07064b50);
         write<uint32_t>(0);
@@ -164,11 +152,7 @@ void ZipArchive::close()
     write<uint16_t>(end64 ? 0xffff : entryCount);
     write<uint32_t>(sizeCD);
     write<uint32_t>(end64 ? 0xffffffff : startCD);
-
     write<uint16_t>(0);
 
-    // fclose(fp);
-    // fp = nullptr;
     f.close();
-
 }
