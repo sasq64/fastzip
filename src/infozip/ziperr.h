@@ -94,9 +94,6 @@ struct
 /* 19 */ { "COMPERR", "Not supported",                ZE_S_SEVERE },
 /* 20 */ { "ZIP64",   "Attempt to read unsupported Zip64 archive",
                                                       ZE_S_SEVERE }
-#  ifdef AZTEC_C
-          ,     /* extremely lame compiler bug workaround */
-#  endif
 };
 #else /* !GLOBALS */
 /* Error messages for ziperr() */

@@ -61,7 +61,7 @@
 #endif
 /* Matches of length 3 are discarded if their distance exceeds TOO_FAR */
 
-#if (defined(ASMV) && !defined(MSDOS16) && defined(DYN_ALLOC))
+#if (defined(ASMV) && defined(DYN_ALLOC))
    error: DYN_ALLOC not yet supported in match.S or match32.asm
 #endif
 
@@ -267,11 +267,7 @@ int *file_method;     /* pointer to DEFLATE or STORE */
 
 int flush_flg;
 
-#if (!defined(ASMV) || !defined(RISCOS))
 unsigned bi_buf;
-#else
-unsigned bi_buf;
-#endif
 /* Output buffer. bits are inserted starting at the bottom (least significant
  * bits). The width of bi_buf must be at least 16 bits.
  */
@@ -281,11 +277,7 @@ unsigned bi_buf;
  * more than 16 bits on some systems.)
  */
 
-#if (!defined(ASMV) || !defined(RISCOS))
 int bi_valid;
-#else
-int bi_valid;
-#endif
 
 /* Used bits in last byte of deflate block */
 int last_bits;
@@ -294,27 +286,15 @@ int last_bits;
  * are always zero.
  */
 
-#if (!defined(ASMV) || !defined(RISCOS))
 char *out_buf;
-#else
-char *out_buf;
-#endif
 /* Current output buffer. */
 
-#if (!defined(ASMV) || !defined(RISCOS))
 unsigned out_offset;
-#else
-unsigned out_offset;
-#endif
 /* Current offset in output buffer.
  * On 16 bit machines, the buffer is limited to 64K.
  */
 
-#if !defined(ASMV) || !defined(RISCOS)
 unsigned out_size;
-#else
-unsigned out_size;
-#endif
 /* Size of current output buffer */
 
 //};

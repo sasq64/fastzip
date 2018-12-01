@@ -441,31 +441,6 @@ void IZDeflate::fill_window()
                  */
             }
             more += WSIZE;
-#if 0
-            if (dot_size > 0 && !display_globaldots) {
-              /* initial space */
-              if (noisy && dot_count == -1) {
-#ifndef WINDLL
-                putc(' ', mesg);
-                fflush(mesg);
-#else
-                fprintf(stdout,"%c",' ');
-#endif
-                dot_count++;
-              }
-              dot_count++;
-              if (dot_size <= (dot_count + 1) * WSIZE) dot_count = 0;
-            }
-            if ((verbose || noisy) && dot_size && !dot_count) {
-#ifndef WINDLL
-              putc('.', mesg);
-              fflush(mesg);
-#else
-              fprintf(stdout,"%c",'.');
-#endif
-              mesg_line_started = 1;
-            }
-#endif
         }
         if (eofile) return;
 
