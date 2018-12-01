@@ -1,5 +1,5 @@
 # Fastzip
-by _Jonas Minnberg_ (jonasmi@unity3d.com)
+by _Jonas Minnberg_ (sasq64@gmail.com)
 
 * Parallell zip compression using *Info-ZIP* deflate or *Intel* fast deflate
 * Parallell unzipping using *miniz*
