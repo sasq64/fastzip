@@ -58,16 +58,16 @@ struct PathAlias
 
 struct FileTarget
 {
-    FileTarget(const std::string& source = "", const std::string& target = "",
-               PackFormat pf = INTEL_COMPRESSED)
-        : source(source), target(target), packFormat(pf)
+    FileTarget(const std::string& aSource = "", const std::string& aTarget = "",
+               PackFormat pf = INTEL_COMPRESSED, uint64_t offs = 0xffffffff)
+        : source(aSource), target(aTarget), packFormat(pf), offset(offs)
     {}
 
     fs::path source;
     std::string target;
-    uint64_t offset = 0xffffffff;
     uint64_t size = 0;
     PackFormat packFormat;
+    uint64_t offset = 0xffffffff;
 
     bool operator==(const FileTarget& other) const
     {

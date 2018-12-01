@@ -10,7 +10,7 @@ void error(ZCONST char *msg)
 
 void flush_outbuf(char *o_buf, unsigned *o_idx)
 {
-    printf("FLUSH?? %p %p\n", o_buf, o_idx);
+    printf("FLUSH?? %p %p\n", o_buf, (void*)o_idx);
     // Not sure
 }
 

@@ -20,8 +20,8 @@ ZipArchive::ZipArchive(const std::string& fileName, int numFiles, int strLen)
     // + numFiles * sizeof(CentralDirEntry));
 
     entries =
-        new uint8_t[strLen + numFiles * (sizeof(CentralDirEntry) + sizeof(Extra64))];
-    entryPtr = entries;
+        std::make_unique<uint8_t[]>(strLen + numFiles * (sizeof(CentralDirEntry) + sizeof(Extra64)));
+    entryPtr = entries.get();
     entryCount = 0;
 }
 
@@ -37,6 +37,8 @@ void ZipArchive::addFile(const std::string& fileName, bool store, uint64_t compS
     ze.timeStamp = ts;
     ze.crc = crc;
     ze.flags = flags;
+    ze.gid = 0;
+    ze.uid = 0;
     add(ze);
 }
 
@@ -120,14 +122,14 @@ void ZipArchive::add(const ZipEntry& entry)
     } else if (head.exLen > 0) {
         write(zeroes, head.exLen);
     }
-    if (entry.data) write(entry.data, entry.dataSize);
+    if (entry.data) write(entry.data.get(), entry.dataSize);
 }
 
 void ZipArchive::close()
 {
     auto startCD = f.tell(); // tell_x(fp);
 
-    write(entries, entryPtr - entries);
+    write(entries.get(), entryPtr - entries.get());
     auto sizeCD = f.tell() - startCD;
 
     auto endCD = f.tell();
@@ -169,5 +171,4 @@ void ZipArchive::close()
     // fp = nullptr;
     f.close();
 
-    delete[] entries;
 }

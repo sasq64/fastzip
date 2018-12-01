@@ -168,7 +168,7 @@ bool KeyStore::load(const std::vector<uint8_t>& keystore, const std::string& pas
     return load(buf, pass);
 }
 
-bool KeyStore::load(MemBuffer& buf, const std::string& pass)
+bool KeyStore::load(MemBuffer& buf, const std::string& /*pass*/)
 {
     auto magic = buf.read<uint32_t>();
     if (magic != 0xfeedfeed) return false;

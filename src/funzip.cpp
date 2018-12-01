@@ -25,11 +25,13 @@ namespace fs = std::experimental::filesystem;
 
 static bool copyfile(File& fout, size_t size, File& fin)
 {
-    if (!fout.canWrite()) return false;
+    if (!fout.canWrite())
+        return false;
     std::array<uint8_t, 65536 * 4> buf;
     while (size > 0) {
         auto rc = fin.Read(&buf[0], size < buf.size() ? size : buf.size());
-        if (rc == 0) return rc;
+        if (rc == 0)
+            return rc;
         size -= rc;
         fout.Write(&buf[0], rc);
     }
@@ -56,18 +58,21 @@ static int64_t uncompress(File& fout, int64_t inSize, File& fin)
         if (inSize == 0 && stream.avail_in == 0) {
             stream.next_in = &data[0];
             stream.avail_in = fin.Read(&data[0], buf.size());
-            if (stream.avail_in == 0) break;
+            if (stream.avail_in == 0)
+                break;
         }
         stream.next_out = &buf[0];
         stream.avail_out = buf.size();
 
         rc = mz_inflate(&stream, MZ_SYNC_FLUSH);
         // Did we unpack anything?
-        if (stream.avail_out == buf.size()) return -1;
+        if (stream.avail_out == buf.size())
+            return -1;
         fout.Write(&buf[0], buf.size() - stream.avail_out);
         total += (buf.size() - stream.avail_out);
     }
-    if (rc < 0) throw funzip_exception("Inflate failed");
+    if (rc < 0)
+        throw funzip_exception("Inflate failed");
 
     mz_inflate(&stream, MZ_FINISH);
 
@@ -78,53 +83,60 @@ static int64_t uncompress(File& fout, int64_t inSize, File& fin)
 
 void FUnzip::smartDestDir(ZipStream& zs)
 {
-    if (zs.size() == 1) return;
+    if (zs.size() == 1)
+        return;
 
     destinationDir = path_basename(zipName);
 
     auto n = zs.getEntry(0).name;
 
     auto pos = n.find('/');
-    if (pos == std::string::npos) return;
+    if (pos == std::string::npos)
+        return;
     std::string first = n.substr(0, pos);
 
     for (const auto& e : zs) {
-        if (!startsWith(e.name, first)) return;
+        if (!startsWith(e.name, first))
+            return;
     }
     destinationDir = "";
 }
 
-static inline void setMeta(const std::string& name, uint16_t flags,
-                           uint32_t datetime, int uid, int gid,
-                           bool link = false)
+static inline void setMeta(const std::string& name,
+                           [[maybe_unused]] uint16_t flags,
+                           [[maybe_unused]] uint32_t datetime,
+                           [[maybe_unused]] int uid,
+                           [[maybe_unused]] int gid,
+                           [[maybe_unused]] bool link = false)
 {
     printf("Date %s to %x\n", name.c_str(), datetime);
     auto ft = msdosToFileTime(datetime);
-    //printf("Date %s to %x -- %ld\n", name.c_str(), datetime, ft.time_since_epoch());
+    // printf("Date %s to %x -- %ld\n", name.c_str(), datetime,
+    // ft.time_since_epoch());
     fs::last_write_time(name, ft);
 
 #if 0
-	auto timestamp = msdosToUnixTime(datetime);
-	struct timeval t[2] = {{0,0}};
-	t[0].tv_sec = t[1].tv_sec = timestamp;
-	
-	fs::file_time ft;
-	fs::last_write_time(name, );
+    auto timestamp = msdosToUnixTime(datetime);
+    struct timeval t[2] = {{0,0}};
+    t[0].tv_sec = t[1].tv_sec = timestamp;
+    
+    fs::file_time ft;
+    fs::last_write_time(name, );
 
-	if(link)
-	{
-		if(flags)
-			lchmod(name.c_str(), flags);
-		lutimes(name.c_str(), t);
-		lchown(name.c_str(), uid, gid);
-	}
-	else
-	{
-		if(flags)
-			chmod(name.c_str(), flags);
-		chown(name.c_str(), uid, gid);
-		utimes(name.c_str(), t);
-	}
+    if(link)
+    {
+        if(flags)
+            lchmod(name.c_str(), flags);
+        lutimes(name.c_str(), t);
+        lchown(name.c_str(), uid, gid);
+    }
+    else
+    {
+        if(flags)
+            chmod(name.c_str(), flags);
+        chown(name.c_str(), uid, gid);
+        utimes(name.c_str(), t);
+    }
 #endif
 }
 static void readExtra(File& f, int exLen, int* uid, int* gid,
@@ -142,8 +154,10 @@ static void readExtra(File& f, int exLen, int* uid, int* gid,
             *uid = extra.unix2.UID;
             *gid = extra.unix2.GID;
         } else if (extra.id == 0x01) {
-            if (compSize) *compSize = extra.zip64.compSize;
-            if (uncompSize) *uncompSize = extra.zip64.uncompSize;
+            if (compSize)
+                *compSize = extra.zip64.compSize;
+            if (uncompSize)
+                *uncompSize = extra.zip64.uncompSize;
         } else if (extra.id == 0xd) {
             std::string link((char*)extra.unix.var, extra.size - 12);
             // printf("LINK:%s\n", link.c_str());
@@ -155,19 +169,21 @@ void FUnzip::exec()
 {
     std::atomic<int> entryNum(0);
     ZipStream zs{zipName};
-    if (!zs.valid()) throw funzip_exception("Not a zip file");
+    if (!zs.valid())
+        throw funzip_exception("Not a zip file");
 
-    if (zs.size() == 0) return;
+    if (zs.size() == 0)
+        return;
 
     if (listFiles) {
-        for (int i = 0; i < zs.size(); i++) {
-            auto& e = zs.getEntry(i);
+        for (auto const& e : zs) {
             printf("%s\n", e.name.c_str());
         }
         return;
     }
 
-    if (destinationDir == "") smartDestDir(zs);
+    if (destinationDir == "")
+        smartDestDir(zs);
     if (destinationDir != "" &&
         destinationDir[destinationDir.size() - 1] != '/')
         destinationDir += "/";
@@ -183,8 +199,9 @@ void FUnzip::exec()
                          verbose = verbose,
                          destDir = destinationDir]() mutable {
             while (true) {
-                int en = entryNum++;
-                if (en >= zs.size()) break;
+                unsigned en = entryNum++;
+                if (en >= zs.size())
+                    break;
                 auto& e = zs.getEntry(en);
                 if ((e.flags & S_IFLNK) == S_IFLNK) {
                     std::lock_guard<std::mutex> lock(lm);
@@ -210,9 +227,11 @@ void FUnzip::exec()
                 readExtra(f, le.exLen, &uid, &gid, &compSize, &uncompSize);
                 auto name = destDir + e.name;
                 auto dname = path_directory(name);
-                if (dname != "" && !fileExists(dname)) makedirs(dname);
+                if (dname != "" && !fileExists(dname))
+                    makedirs(dname);
 
-                if (verbose) printf("%s\n", name.c_str());
+                if (verbose)
+                    printf("%s\n", name.c_str());
                 // printf("%s %x %s %s\n", fileName, a, (a & S_IFDIR)  ==
                 // S_IFDIR ? "DIR" : "", (a & S_IFLNK) == S_IFLNK ? "LINK" :
                 // "");
@@ -272,9 +291,11 @@ void FUnzip::exec()
         readExtra(f, le.exLen, &uid, &gid);
         auto name = destinationDir + e.name;
         auto l = name.length();
-        if (name[l - 1] == '/') name = name.substr(0, l - 1);
+        if (name[l - 1] == '/')
+            name = name.substr(0, l - 1);
         setMeta(name, e.flags, le.dateTime, uid, gid);
     }
 
-    if (zs.comment) puts(zs.comment);
+    if (zs.comment())
+        puts(zs.comment());
 }

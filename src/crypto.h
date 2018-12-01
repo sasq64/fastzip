@@ -36,7 +36,7 @@ public:
 	bool load(const std::vector<uint8_t>& data, const std::string& pass = "");
 
 	std::vector<uint8_t> getKey(const std::string& pass, const std::string& name = "");
-	std::vector<uint8_t> getCert(int i = 0) { return certificate; }
+	std::vector<uint8_t> getCert() { return certificate; }
 
 	std::vector<uint8_t> getKey() { return getKey(currentKeyPass, currentKeyName); }
 

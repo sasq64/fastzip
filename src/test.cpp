@@ -21,28 +21,28 @@ enum
 std::string makeTemp(const std::string& prefix)
 {
     std::string result(prefix.length() + 8, ' ');
-    for(unsigned i=0; i<= result.length(); i++) {
-        result[i] = i < prefix.length() ? prefix[i] : ('a' + (rand()%26));
+    for (unsigned i = 0; i < result.length(); i++) {
+        result[i] = i < prefix.length() ? prefix[i] : ('a' + (rand() % 26));
     }
     return result;
 }
 
-std::vector<std::string> createFiles(const std::string& templ, int count, int maxSize,
-                                     int minSize = 1, int flags = 0)
+std::vector<std::string> createFiles(const std::string& templ, int count,
+                                     int maxSize, int minSize = 1,
+                                     int flags = 0)
 {
     makedirs(path_directory(templ));
     std::vector<std::string> files(count);
     for (auto& f : files) {
         auto name = makeTemp(templ);
-        auto file = File {name};
+        auto file = File{name};
         int sz = (rand() % (maxSize - minSize)) + minSize;
-        uint8_t* data = new uint8_t[sz];
+        auto data = std::make_unique<uint8_t[]>(sz);
         if ((flags & EMPTY) == 0) {
             for (int i = 0; i < sz; i++)
                 data[i] = rand() % 0x100;
         }
-        file.Write(data, sz);
-        delete[] data;
+        file.Write(data.get(), sz);
     }
     return files;
 }
@@ -51,14 +51,17 @@ bool compareFile(const std::string& a, const std::string& b)
 {
     std::array<uint8_t, 65536> temp0;
     std::array<uint8_t, 65536> temp1;
-    File fp0 = File {a};
-    File fp1 = File {b};
+    File fp0 = File{a};
+    File fp1 = File{b};
     while (true) {
         int rc0 = fp0.Read(temp0);
         int rc1 = fp1.Read(temp1);
-        if (rc0 != rc1) return false;
-        if (memcmp(&temp0[0], &temp1[0], rc0) != 0) return false;
-        if (rc0 <= 0) break;
+        if (rc0 != rc1)
+            return false;
+        if (memcmp(&temp0[0], &temp1[0], rc0) != 0)
+            return false;
+        if (rc0 <= 0)
+            break;
     }
     return true;
 }
@@ -97,8 +100,10 @@ void zipUnzip(const std::string& dirName, const std::string& zipName,
     Fastzip fs;
     FUnzip fu;
     fs.junkPaths = true;
-    if (flags & FORCE64) fs.force64 = true;
-    if (flags & SEQ) fs.doSeq = true;
+    if (flags & FORCE64)
+        fs.force64 = true;
+    if (flags & SEQ)
+        fs.doSeq = true;
     if (flags & SIGN) {
         fs.keyPassword = "fastzip";
         fs.doSign = true;
@@ -115,23 +120,24 @@ void zipUnzip(const std::string& dirName, const std::string& zipName,
 
 TEST_CASE("file", "")
 {
-	File f { "README.md" };
-	while(!f.atEnd()) {
-		auto line = f.readLine();
-		puts(line.c_str());
-	}
+    File f{"README.md"};
+    while (!f.atEnd()) {
+        auto line = f.readLine();
+        puts(line.c_str());
+    }
 
-	f.seek(0);
-	for(const auto& line : f.lines()) {
-		puts(line.c_str());
-	}
+    f.seek(0);
+    for (const auto& line : f.lines()) {
+        puts(line.c_str());
+    }
 }
 
 TEST_CASE("basic", "")
 {
     removeFiles("temp/out");
     // removeFiles("temp/test.zip");
-    if (!fileExists("temp/zipme")) createFiles("temp/zipme/f", 10, 128 * 1024);
+    if (!fileExists("temp/zipme"))
+        createFiles("temp/zipme/f", 10, 128 * 1024);
 
     SECTION("Create normal zip")
     {

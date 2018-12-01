@@ -2,10 +2,11 @@
 
 #include "file.h"
 #include <cstdint>
+#include <memory>
 
 struct zip_exception
 {
-    zip_exception(const std::string& msg) : msg(msg) {}
+    zip_exception(const std::string& aMsg) : msg(aMsg) {}
     std::string msg;
 };
 
@@ -13,7 +14,7 @@ struct ZipEntry
 {
     std::string name;
     bool store;
-    uint8_t* data;
+    std::unique_ptr<uint8_t[]> data;
     uint64_t dataSize;
     uint64_t originalSize;
     uint32_t crc;
@@ -23,6 +24,7 @@ struct ZipEntry
     int gid;
 };
 
+// Class used for constructing a zip archive
 class ZipArchive
 {
 public:
@@ -39,14 +41,14 @@ public:
     void write(const uint8_t* data, uint64_t size) { f.Write(data, size); }
 
 private:
-    // NOTE: In case you need to support big endian you need to overload write()
+
     template <typename T> void write(const T& t) { f.Write(t); }
     void write(const std::string& s) { f.Write(s.c_str(), s.length()); }
 
     bool zipAlign = false;
     bool force64 = false;
 
-    uint8_t* entries;
+    std::unique_ptr<uint8_t[]> entries;
     uint8_t* entryPtr;
     uint64_t entryCount;
     File f;

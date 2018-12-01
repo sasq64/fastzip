@@ -82,17 +82,16 @@ void readDER(const vector<uint8_t>& data, vector<DER>& v)
 
         target.tag = p.first;
         target.data = mb2.buffer();
+        target.value = 0;
 
         if (p.first == 0x13 || p.first == 0x17) {
             target.text = mb2.readString(p.second);
         } else if (p.first == 0x02) {
-            unsigned v = 0;
             switch (p.second) {
-            case 1: v = mb2.read<uint8_t>(); break;
-            case 2: v = mb2.read<uint16_t>(); break;
-            case 4: v = mb2.read<uint32_t>(); break;
+            case 1: target.value = mb2.read<uint8_t>(); break;
+            case 2: target.value = mb2.read<uint16_t>(); break;
+            case 4: target.value = mb2.read<uint32_t>(); break;
             }
-            target.value = v;
         } else if (p.first == 03 || p.first == 4 || p.first == 6) {
         } else if (p.first >= 0x30) {
             readDER(mb2.buffer(), target.children);
@@ -128,7 +127,7 @@ void pushHead(vec8& vec, uint8_t tag, uint32_t len)
     }
 }
 
-void mkSEQ(vec8& v) {}
+void mkSEQ(vec8&) {}
 
 vec8 mkINT(uint64_t val)
 {

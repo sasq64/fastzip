@@ -87,7 +87,7 @@ void sign(ZipArchive& zipArchive, KeyStore& keyStore, const string& digestFile)
     RSA* rsa = PEM_read_bio_RSAPrivateKey(bio, NULL, NULL, NULL);
     if (rsa == nullptr) throw sign_exception("Could not read valid RSA key");
 
-    vector<uint8_t> certificate = keyStore.getCert(0);
+    vector<uint8_t> certificate = keyStore.getCert();
 
     // Extract the meta data
     DER certData = readDER(certificate);

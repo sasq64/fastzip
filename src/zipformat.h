@@ -131,7 +131,7 @@ struct PACK UnixExtra
     uint32_t Mtime;
     int16_t Uid;
     int16_t Gid;
-    uint8_t var[0];
+    uint8_t var[1];
 };
 
 struct PACK Unix2Extra
