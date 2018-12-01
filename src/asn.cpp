@@ -20,9 +20,15 @@ void dumpDER(MemBuffer mb, int level, int offset)
         } else if (p.first == 0x02) {
             unsigned v = 0;
             switch (p.second) {
-            case 1: v = mb2.read<uint8_t>(); break;
-            case 2: v = mb2.read<uint16_t>(); break;
-            case 4: v = mb2.read<uint32_t>(); break;
+            case 1:
+                v = mb2.read<uint8_t>();
+                break;
+            case 2:
+                v = mb2.read<uint16_t>();
+                break;
+            case 4:
+                v = mb2.read<uint32_t>();
+                break;
             }
             printf("%x\n", v);
         } else if (p.first == 03 || p.first == 4 || p.first == 6) {
@@ -88,9 +94,15 @@ void readDER(const vector<uint8_t>& data, vector<DER>& v)
             target.text = mb2.readString(p.second);
         } else if (p.first == 0x02) {
             switch (p.second) {
-            case 1: target.value = mb2.read<uint8_t>(); break;
-            case 2: target.value = mb2.read<uint16_t>(); break;
-            case 4: target.value = mb2.read<uint32_t>(); break;
+            case 1:
+                target.value = mb2.read<uint8_t>();
+                break;
+            case 2:
+                target.value = mb2.read<uint16_t>();
+                break;
+            case 4:
+                target.value = mb2.read<uint32_t>();
+                break;
             }
         } else if (p.first == 03 || p.first == 4 || p.first == 6) {
         } else if (p.first >= 0x30) {

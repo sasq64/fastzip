@@ -16,4 +16,5 @@ private:
     const char* msg;
 };
 
-void sign(ZipArchive& zipArchive, KeyStore& keyStore, const std::string& digestFile);
+void sign(ZipArchive& zipArchive, KeyStore& keyStore,
+          const std::string& digestFile);

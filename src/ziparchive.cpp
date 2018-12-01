@@ -14,8 +14,8 @@ ZipArchive::ZipArchive(const std::string& fileName, int numFiles, int strLen)
     static_assert(sizeof(LocalEntry) == 30);
     static_assert(sizeof(CentralDirEntry) == 46);
 
-    entries =
-        std::make_unique<uint8_t[]>(strLen + numFiles * (sizeof(CentralDirEntry) + sizeof(Extra64)));
+    entries = std::make_unique<uint8_t[]>(
+        strLen + numFiles * (sizeof(CentralDirEntry) + sizeof(Extra64)));
     entryPtr = entries.get();
     entryCount = 0;
 }
@@ -118,7 +118,8 @@ void ZipArchive::add(const ZipEntry& entry)
     } else if (head.exLen > 0) {
         write(zeroes, head.exLen);
     }
-    if (entry.data) write(entry.data.get(), entry.dataSize);
+    if (entry.data)
+        write(entry.data.get(), entry.dataSize);
 }
 
 void ZipArchive::close()
@@ -132,7 +133,8 @@ void ZipArchive::close()
 
     bool end64 = force64;
     if (!end64) {
-        if (entryCount > 0xfffe || startCD > 0xfffffffeL) end64 = true;
+        if (entryCount > 0xfffe || startCD > 0xfffffffeL)
+            end64 = true;
     }
 
     if (end64) {

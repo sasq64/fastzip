@@ -9,7 +9,8 @@
 #include <openssl/pem.h>
 
 const static int SHA_LEN = 20;
-uint32_t crc32_fast(const void* data, size_t length, uint32_t previousCrc32 = 0);
+uint32_t crc32_fast(const void* data, size_t length,
+                    uint32_t previousCrc32 = 0);
 
 using namespace std;
 using namespace asn1;
@@ -17,8 +18,8 @@ using namespace asn1;
 void sign(ZipArchive& zipArchive, KeyStore& keyStore, const string& digestFile)
 {
     SHA_CTX context;
-    string head =
-        "Manifest-Version: 1.0\015\012Created-By: 1.0 (Fastzip)\015\012\015\012";
+    string head = "Manifest-Version: 1.0\015\012Created-By: 1.0 "
+                  "(Fastzip)\015\012\015\012";
 
     string manifestMF = head + digestFile;
     uint8_t manifestSha[SHA_LEN];
@@ -41,12 +42,14 @@ void sign(ZipArchive& zipArchive, KeyStore& keyStore, const string& digestFile)
         char* ptr = digestPtr;
 
         while (*ptr) {
-            if (ptr[0] == 0x0d && ptr[1] == 0xa && ptr[2] == 0x0d && ptr[3] == 0x0a)
+            if (ptr[0] == 0x0d && ptr[1] == 0xa && ptr[2] == 0x0d &&
+                ptr[3] == 0x0a)
                 break;
             ptr++;
         }
 
-        if (!*ptr) break;
+        if (!*ptr)
+            break;
 
         ptr += 4;
 
@@ -60,12 +63,12 @@ void sign(ZipArchive& zipArchive, KeyStore& keyStore, const string& digestFile)
     const string sigHead = "Signature-Version: 1.0\015\012Created-By: 1.0 "
                            "(Fastzip)\015\012SHA1-Digest-Manifest: ";
 
-    string certSF = sigHead + base64_encode(manifestSha, SHA_LEN) + "\015\012\015\012" +
-                    string(&digestCopy[0]);
+    string certSF = sigHead + base64_encode(manifestSha, SHA_LEN) +
+                    "\015\012\015\012" + string(&digestCopy[0]);
 
     checksum = crc32_fast(certSF.c_str(), certSF.length());
-    zipArchive.addFile("META-INF/CERT.SF", true, certSF.length(), certSF.length(), 0,
-                       checksum);
+    zipArchive.addFile("META-INF/CERT.SF", true, certSF.length(),
+                       certSF.length(), 0, checksum);
     zipArchive.write((uint8_t*)certSF.c_str(), certSF.length());
 
     unsigned char digest[SHA_LEN];
@@ -85,7 +88,8 @@ void sign(ZipArchive& zipArchive, KeyStore& keyStore, const string& digestFile)
     string pemKey = toPem(key);
     BIO* bio = BIO_new_mem_buf((void*)pemKey.c_str(), -1);
     RSA* rsa = PEM_read_bio_RSAPrivateKey(bio, NULL, NULL, NULL);
-    if (rsa == nullptr) throw sign_exception("Could not read valid RSA key");
+    if (rsa == nullptr)
+        throw sign_exception("Could not read valid RSA key");
 
     vector<uint8_t> certificate = keyStore.getCert();
 

@@ -12,7 +12,8 @@ namespace fs = std::experimental::filesystem;
 class fastzip_exception : public std::exception
 {
 public:
-    explicit fastzip_exception(const char* ptr = "Fastzip Exception") : msg(ptr) {}
+    explicit fastzip_exception(const char* ptr = "Fastzip Exception") : msg(ptr)
+    {}
     explicit fastzip_exception(const std::exception& e) : msg(e.what()) {}
     const char* what() const noexcept override { return msg; }
 
@@ -46,10 +47,10 @@ struct PathAlias
             diskPath = parts[0];
             aliasTo = parts[1];
         } else
-			diskPath = alias;
+            diskPath = alias;
     }
 
-	PathAlias(const char* path) : PathAlias(std::string(path)) { }
+    PathAlias(const char* path) : PathAlias(std::string(path)) {}
     PathAlias(const fs::path& path) : diskPath(path) {}
 
     fs::path diskPath;

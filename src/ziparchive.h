@@ -33,15 +33,14 @@ public:
     void doAlign(bool align) { zipAlign = align; }
     void doForce64(bool f64) { force64 = f64; }
 
-    void addFile(const std::string& fileName, bool store = false, uint64_t compSize = 0,
-                 uint64_t uncompSize = 0, time_t ts = 0, uint32_t crc = 0,
-                 uint16_t flags = 0);
+    void addFile(const std::string& fileName, bool store = false,
+                 uint64_t compSize = 0, uint64_t uncompSize = 0, time_t ts = 0,
+                 uint32_t crc = 0, uint16_t flags = 0);
     void add(const ZipEntry& entry);
     void close();
     void write(const uint8_t* data, uint64_t size) { f.Write(data, size); }
 
 private:
-
     template <typename T> void write(const T& t) { f.Write(t); }
     void write(const std::string& s) { f.Write(s.c_str(), s.length()); }
 

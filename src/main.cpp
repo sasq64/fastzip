@@ -135,17 +135,20 @@ int main(int argc, char** argv)
             if (argv[i][1] == '-') {
                 auto parts = split(&argv[i][2], "=");
                 name = parts[0];
-                if (parts.size() > 1) args = split(parts[1], ",");
+                if (parts.size() > 1)
+                    args = split(parts[1], ",");
             } else {
                 opt = argv[i][1];
-                if (argv[i][2]) args = split(&argv[i][2], ",");
+                if (argv[i][2])
+                    args = split(&argv[i][2], ",");
             }
 
             // Handle option
             if (isdigit(opt)) {
                 packLevel = opt - '0';
-                if (packLevel > 0) packMode = INFOZIP;
-			}
+                if (packLevel > 0)
+                    packMode = INFOZIP;
+            }
 #ifdef WITH_INTEL
             else if (opt == 'z' || name == "zip")
                 packMode = INFOZIP;
@@ -191,9 +194,12 @@ int main(int argc, char** argv)
                 fastZip.doSeq = true;
             } else if (name == "sign" || opt == 'S') {
                 fastZip.keyPassword = "fastzip";
-                if (!args.empty()) fastZip.keystoreName = args[0];
-                if (args.size() > 1) fastZip.keyPassword = args[1];
-                if (args.size() > 2) fastZip.keyName = args[2];
+                if (!args.empty())
+                    fastZip.keystoreName = args[0];
+                if (args.size() > 1)
+                    fastZip.keyPassword = args[1];
+                if (args.size() > 2)
+                    fastZip.keyName = args[2];
                 fastZip.doSign = true;
             } else if (name == "verbose" || opt == 'v')
                 fastZip.verbose = true;

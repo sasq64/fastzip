@@ -82,7 +82,7 @@ static PackResult store_uncompressed(File& f, int inSize, uint8_t* out,
                                      size_t* outSize, uint32_t* checksum,
                                      uint8_t* sha)
 {
-    auto size = f.Read(out, inSize);
+    auto const size = f.Read(out, inSize);
 
     if (sha) {
         SHA_CTX context;
@@ -241,19 +241,19 @@ void Fastzip::packZipData(File& f, int size, PackFormat inFormat,
         }
 #ifdef WITH_INTEL
         else if (outFormat == INTEL_COMPRESSED)
-            state = intel_deflate(f, size, outBuf.get(), &outSize, &target.crc, sha,
-                                  earlyOut);
+            state = intel_deflate(f, size, outBuf.get(), &outSize, &target.crc,
+                                  sha, earlyOut);
 #endif
         else
-            state =
-                store_uncompressed(f, size, outBuf.get(), &outSize, &target.crc, sha);
+            state = store_uncompressed(f, size, outBuf.get(), &outSize,
+                                       &target.crc, sha);
 
         if (state == PackResult::FAILED) {
             warning(string("Compression failed! Storing '") + target.name +
                     "' as a fallback");
             f.seek(startPos);
-            state =
-                store_uncompressed(f, size, outBuf.get(), &outSize, &target.crc, sha);
+            state = store_uncompressed(f, size, outBuf.get(), &outSize,
+                                       &target.crc, sha);
         }
         if (state == PackResult::STORED)
             target.store = true;
@@ -276,7 +276,7 @@ void Fastzip::packZipData(File& f, int size, PackFormat inFormat,
 
 void Fastzip::addZip(const fs::path& zipName, PackFormat format)
 {
-    for(auto const& entry : ZipStream{zipName}) {
+    for (auto const& entry : ZipStream{zipName}) {
         fileNames.emplace_back(zipName, entry.name, format, entry.offset);
         strLen += entry.name.length();
     }

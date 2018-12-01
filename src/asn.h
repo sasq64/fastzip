@@ -49,7 +49,8 @@ public:
 
     std::string readString(int len = -1)
     {
-        if (len == -1) len = read<uint16_t>();
+        if (len == -1)
+            len = read<uint16_t>();
         char s[1024]; // TODO: Very bad!
         read(s, len);
         s[len] = 0;
@@ -87,7 +88,8 @@ public:
     MemBuffer readBuffer(int size)
     {
         MemBuffer buf(size);
-        if (size > 0) read(&buf.buffer()[0], size);
+        if (size > 0)
+            read(&buf.buffer()[0], size);
         return buf;
     }
 
@@ -157,4 +159,3 @@ std::vector<uint8_t> mkBIN(uint8_t tag, const std::vector<uint8_t>& v);
 std::vector<uint8_t> mkSTR(uint8_t tag, const std::string& text);
 std::vector<uint8_t> mkNIL();
 } // namespace asn1
-

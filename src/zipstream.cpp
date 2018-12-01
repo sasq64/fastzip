@@ -14,13 +14,13 @@ template <> struct getType<4>
 };
 
 template <int BYTES, typename T = typename getType<BYTES>::type>
-T readBytes(uint8_t* ptr)
+T readBytes(uint8_t const* ptr)
 {
-    T t = *(T*)ptr;
+    const T t = *(T*)ptr;
     return t;
 }
 
-int64_t decodeInt(uint8_t** ptr)
+int64_t decodeInt(uint8_t const** ptr)
 {
     auto* data = *ptr;
     auto sz = data[0];
@@ -85,8 +85,8 @@ ZipStream::ZipStream(const std::string& zipName)
     f_.seek(cdOffset, SEEK_SET);
     char fileName[65536];
     for (auto i = 0L; i < entryCount; i++) {
-        auto cd = f_.Read<CentralDirEntry>();
-        auto rc = f_.Read(&fileName, cd.nameLen);
+        auto const cd = f_.Read<CentralDirEntry>();
+        auto const rc = f_.Read(&fileName, cd.nameLen);
         fileName[rc] = 0;
         f_.seek(cd.nameLen - rc, SEEK_CUR);
         int64_t offset = cd.offset;
@@ -98,9 +98,9 @@ ZipStream::ZipStream(const std::string& zipName)
             if (extra.id == 0x01) {
                 offset = extra.zip64.offset;
             } else if (extra.id == 0x7875) {
-                auto* ptr = &extra.data[1];
-                uint32_t uid = decodeInt(&ptr);
-                uint32_t gid = decodeInt(&ptr);
+                auto const* ptr = &extra.data[1];
+                uint32_t const uid = decodeInt(&ptr);
+                uint32_t const gid = decodeInt(&ptr);
                 printf("UID %x GID %x\n", uid, gid);
             } else if (extra.id == 0x5455) {
                 // TODO: Read timestamps
@@ -111,10 +111,10 @@ ZipStream::ZipStream(const std::string& zipName)
         }
 
         f_.seek(cd.commLen, SEEK_CUR);
-        auto flags = cd.attr1 >> 16;
-        if ((flags & S_IFREG) == 0) // Some archives have broken attributes
-            flags = 0;
+        auto const flags = ((cd.attr1 & (S_IFREG >> 16)) == 0)
+                               ? // Some archives have broken attributes
+                               0
+                               : cd.attr1 >> 16;
         entries_.emplace_back(fileName, offset, flags);
     }
 }
-

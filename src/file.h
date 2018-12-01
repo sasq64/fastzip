@@ -32,7 +32,8 @@ private:
     std::string msg;
 };
 
-#define IO_ERROR(x) {}
+#define IO_ERROR(x)                                                            \
+    {}
 
 class File
 {
@@ -67,7 +68,7 @@ public:
 
     File() = default;
 
-    File(FILE* fp) :  fp_(fp) {}
+    File(FILE* fp) : fp_(fp) {}
 
     explicit File(const char* name, const Mode mode = READ)
     {
@@ -75,14 +76,14 @@ public:
     }
 
     explicit File(const std::string& name, const Mode mode = READ)
-	{
-		openAndThrow(name.c_str(), mode);
-	}
+    {
+        openAndThrow(name.c_str(), mode);
+    }
 
-	bool isOpen() const { return fp_ != nullptr; }
+    bool isOpen() const { return fp_ != nullptr; }
 
-	bool canWrite() { return true; }
-	bool canRead() { return true; }
+    bool canWrite() { return true; }
+    bool canRead() { return true; }
 
     File(const File&) = delete;
 
@@ -123,7 +124,8 @@ public:
         std::array<char, 10> lineTarget;
         char* ptr = fgets(&lineTarget[0], lineTarget.size(), fp_);
         if (!ptr) {
-            if (feof(fp_)) return "";
+            if (feof(fp_))
+                return "";
             IO_ERROR();
         }
         auto len = std::strlen(ptr);
@@ -131,7 +133,8 @@ public:
         while (ptr[len - 1] != '\n') {
             result += std::string{&lineTarget[0], len};
             ptr = fgets(&lineTarget[0], lineTarget.size(), fp_);
-            if (!ptr) IO_ERROR();
+            if (!ptr)
+                IO_ERROR();
             len = std::strlen(ptr);
         }
         while (len > 0 && (ptr[len - 1] == '\n' || ptr[len - 1] == '\r'))
@@ -156,10 +159,7 @@ public:
         return fwrite(target, 1, bytes, fp_);
     }
 
-    bool atEnd()
-    {
-        return feof(fp_);
-    }
+    bool atEnd() { return feof(fp_); }
 
     void seek(int64_t pos, int whence = Seek::Set)
     {
@@ -182,25 +182,23 @@ public:
     bool open(const char* name, Mode mode) noexcept
     {
         fp_ = fopen(name, mode == READ ? "rb" : "wb");
-		return fp_ != nullptr;
+        return fp_ != nullptr;
     }
 
     void openAndThrow(const char* name, Mode mode)
     {
-        if(!open(name, mode))
+        if (!open(name, mode))
             IO_ERROR();
     }
 
     void close() noexcept
     {
-        if (fp_) fclose(fp_);
+        if (fp_)
+            fclose(fp_);
         fp_ = nullptr;
     }
 
-    FILE* filePointer()
-    {
-        return fp_;
-    }
+    FILE* filePointer() { return fp_; }
 
 private:
     FILE* fp_ = nullptr;
@@ -220,7 +218,8 @@ template <bool REFERENCE> class LineReader
     {
         iterator(File& f, ssize_t offset) : f_(f), offset_(offset)
         {
-            if (offset >= 0) f.seek(offset);
+            if (offset >= 0)
+                f.seek(offset);
             line = f.readLine();
         }
 

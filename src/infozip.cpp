@@ -1,14 +1,14 @@
 #include "infozip/deflate.h"
-#include <cstdio>
 #include <cassert>
 #include <cstdint>
+#include <cstdio>
 
-void error(ZCONST char *msg)
+void error(ZCONST char* msg)
 {
     fprintf(stderr, "%s\n", msg);
 }
 
-void flush_outbuf(char *o_buf, unsigned *o_idx)
+void flush_outbuf(char* o_buf, unsigned* o_idx)
 {
     printf("FLUSH?? %p %p\n", o_buf, (void*)o_idx);
     // Not sure
@@ -23,23 +23,22 @@ int seekable()
 
 struct BufData
 {
-    char *in_buf;
+    char* in_buf;
     unsigned in_size;
     unsigned in_offset;
-    IZDeflate *zid;
+    IZDeflate* zid;
     bool fail;
 };
 
-local unsigned mem_read(void *handle, char *target, unsigned size)
+local unsigned mem_read(void* handle, char* target, unsigned size)
 {
-    BufData *bufdata = (BufData*)handle;
+    BufData* bufdata = (BufData*)handle;
 
-    char *wp = bufdata->zid->out_buf + bufdata->zid->out_offset;
-    char *rp = bufdata->in_buf + bufdata->in_offset;
+    char* wp = bufdata->zid->out_buf + bufdata->zid->out_offset;
+    char* rp = bufdata->in_buf + bufdata->in_offset;
 
     // This will normally never trigger
-    if ((wp + 32768 > rp) && (bufdata->zid->out_buf < bufdata->in_buf))
-    {
+    if ((wp + 32768 > rp) && (bufdata->zid->out_buf < bufdata->in_buf)) {
         bufdata->fail = true;
         return 0;
     }
@@ -79,17 +78,17 @@ Next buffer: Shift everything 3 bits to the left
 
 */
 
-
 /*
 
    If prevous buffer had 3 bits left ufilled;
     Shift this buffer 3 bits left
-    OR the return value into the last word of the previous buffer (possibly anding by 0xffffffffffffffff >> 3) first)
+    OR the return value into the last word of the previous buffer (possibly
+   anding by 0xffffffffffffffff >> 3) first)
 */
 
 // INTERFACE
 
-int64_t iz_deflate(int level, char *tgt, char *src, ulg tgtsize, ulg srcsize) 
+int64_t iz_deflate(int level, char* tgt, char* src, ulg tgtsize, ulg srcsize)
 {
     ush att = (ush)UNKNOWN;
     ush flags = 0;
@@ -118,9 +117,9 @@ int64_t iz_deflate(int level, char *tgt, char *src, ulg tgtsize, ulg srcsize)
     if (buf.fail)
         return -1;
 
-    if(method == STORE)
+    if (method == STORE)
         return -2;
 
-    //printf("Last bits: %d\n", zid.last_bits);
+    // printf("Last bits: %d\n", zid.last_bits);
     return ((out_total - 1) << 3) + zid.last_bits;
 }
