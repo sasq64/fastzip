@@ -168,20 +168,6 @@
 #  undef ASMV
 #endif
 
-/* When "void" is an alias for "int", prototypes cannot be used. */
-#if (defined(NO_VOID) && !defined(NO_PROTO))
-#  define NO_PROTO
-#endif
-
-/* Used to remove arguments in function prototypes for non-ANSI C */
-#ifndef NO_PROTO
-#  define OF(a) a
-#  define OFT(a) a
-#else /* NO_PROTO */
-#  define OF(a) ()
-#  define OFT(a)
-#endif /* ?NO_PROTO */
-
 /* If the compiler can't handle const define ZCONST in osdep.h */
 /* Define const itself in case the system include files are bonkers */
 #ifndef ZCONST
@@ -260,34 +246,6 @@
 #endif
 
 /*
- * A couple of forward declarations that are needed on systems that do
- * not supply C runtime library prototypes.
- */
-#ifdef NO_PROTO
-IZ_IMP char *strcpy();
-IZ_IMP char *strcat();
-IZ_IMP char *strrchr();
-/* XXX use !defined(ZMEM) && !defined(__hpux__) ? */
-#if !defined(ZMEM) && defined(NO_STRING_H)
-IZ_IMP char *memset();
-IZ_IMP char *memcpy();
-#endif /* !ZMEM && NO_STRING_H */
-
-/* XXX use !defined(__hpux__) ? */
-#ifdef NO_STDLIB_H
-IZ_IMP char *calloc();
-IZ_IMP char *malloc();
-IZ_IMP char *getenv();
-IZ_IMP long atol();
-#endif /* NO_STDLIB_H */
-
-#ifndef NO_MKTEMP
-IZ_IMP char *mktemp();
-#endif /* !NO_MKTEMP */
-
-#endif /* NO_PROTO */
-
-/*
  * SEEK_* macros, should be defined in stdio.h
  */
 /* Define fseek() commands */
@@ -342,12 +300,12 @@ IZ_IMP char *mktemp();
 
     /* Multi Byte Character Set */
     extern char *___tmp_ptr;
-    unsigned char *zmbschr OF((ZCONST unsigned char *, unsigned int));
-    unsigned char *zmbsrchr OF((ZCONST unsigned char *, unsigned int));
+    unsigned char *zmbschr(ZCONST unsigned char *, unsigned int);
+    unsigned char *zmbsrchr(ZCONST unsigned char *, unsigned int);
 #   define CLEN(ptr) mblen((ZCONST char *)ptr, MB_CUR_MAX)
 #   define PREINCSTR(ptr) (ptr += CLEN(ptr))
 #   define POSTINCSTR(ptr) (___tmp_ptr=(char *)ptr,ptr += CLEN(ptr),___tmp_ptr)
-    int lastchar OF((ZCONST char *ptr));
+    int lastchar(ZCONST char *ptr);
 #   define MBSCHR(str,c) (char *)zmbschr((ZCONST unsigned char *)(str), c)
 #   define MBSRCHR(str,c) (char *)zmbsrchr((ZCONST unsigned char *)(str), (c))
 #   ifndef SETLOCALE
@@ -596,11 +554,11 @@ typedef struct ztimbuf {
 
       /* 64-bit fseeko */
       /* function in win32.c */
-      int zfseeko OF((FILE *, zoff_t, int));
+      int zfseeko(FILE *, zoff_t, int);
 
       /* 64-bit ftello */
       /* function in win32.c */
-      zoff_t zftello OF((FILE *));
+      zoff_t zftello(FILE *);
 
       /* 64-bit fopen */
 #     define zfopen fopen
@@ -643,11 +601,11 @@ typedef struct ztimbuf {
 
       /* 64-bit fseeko */
       /* function in win32.c */
-      int zfseeko OF((FILE *, zoff_t, int));
+      int zfseeko(FILE *, zoff_t, int);
 
       /* 64-bit ftello */
       /* function in win32.c */
-      zoff_t zftello OF((FILE *));
+      zoff_t zftello(FILE *);
 
       /* 64-bit fopen */
 #     define zfopen fopen
@@ -670,11 +628,11 @@ typedef struct ztimbuf {
 
       /* 64-bit fseeko */
       /* function in win32.c */
-      int zfseeko OF((FILE *, zoff_t, int));
+      int zfseeko(FILE *, zoff_t, int);
 
       /* 64-bit ftello */
       /* function in win32.c */
-      zoff_t zftello OF((FILE *));
+      zoff_t zftello(FILE *);
 
       /* 64-bit fopen */
 #     define zfopen fopen
@@ -689,11 +647,11 @@ typedef struct ztimbuf {
 
       /* 64-bit fseeko */
       /* function in win32.c */
-      int zfseeko OF((FILE *, zoff_t, int));
+      int zfseeko(FILE *, zoff_t, int);
 
       /* 64-bit ftello */
       /* function in win32.c */
-      zoff_t zftello OF((FILE *));
+      zoff_t zftello(FILE *);
 
       /* 64-bit fopen */
 

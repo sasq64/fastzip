@@ -598,9 +598,9 @@ extern int zipstate;            /* flag "zipfile has been stat()'ed */
 
 #ifndef UTIL
 #ifdef USE_ZIPMAIN
-int zipmain OF((int, char **));
+int zipmain(int, char **);
 #else
-int main OF((int, char **));
+int main(int, char **);
 #endif /* USE_ZIPMAIN */
 #endif
 
@@ -610,259 +610,259 @@ extern int aflag;
 #ifdef CMS_MVS
 extern int bflag;
 #endif /* CMS_MVS */
-void zipmessage_nl OF((ZCONST char *, int));
-void zipmessage OF((ZCONST char *, ZCONST char *));
-void zipwarn OF((ZCONST char *, ZCONST char *));
-void ziperr OF((int, ZCONST char *));
+void zipmessage_nl(ZCONST char *, int);
+void zipmessage(ZCONST char *, ZCONST char *);
+void zipwarn(ZCONST char *, ZCONST char *);
+void ziperr(int, ZCONST char *);
 #ifdef UTIL
 #  define error(msg)    ziperr(ZE_LOGIC, msg)
 #else
-   void error OF((ZCONST char *));
+   void error(ZCONST char *);
 #  ifdef VMSCLI
-     void help OF((void));
+     void help(void);
 #  endif
-   int encr_passwd OF((int, char *, int, ZCONST char *));
+   int encr_passwd(int, char *, int, ZCONST char *);
 #endif
 
         /* in zipup.c */
 #ifndef UTIL
   /* zip64 support 08/31/2003 R.Nausedat */
-   int percent OF((uzoff_t, uzoff_t));
+   int percent(uzoff_t, uzoff_t);
 
-   int zipup OF((struct zlist far *));
+   int zipup(struct zlist far *);
 #  ifdef USE_ZLIB
-     void zl_deflate_free OF((void));
+     void zl_deflate_free(void);
 #  else
-     void flush_outbuf OF((char *, unsigned *));
-     int seekable OF((void));
-     //extern THREAD_LOCAL unsigned (*read_buf) OF((char *, unsigned int));
+     void flush_outbuf(char *, unsigned *);
+     int seekable(void);
+     //extern THREAD_LOCAL unsigned (*read_buf)(char *, unsigned int);
 #  endif /* !USE_ZLIB */
 #  ifdef ZP_NEED_MEMCOMPR
-     ulg memcompress OF((char *, ulg, char *, ulg));
+     ulg memcompress(char *, ulg, char *, ulg);
 #  endif
 #  ifdef BZIP2_SUPPORT
-   void bz_compress_free OF((void));
+   void bz_compress_free(void);
 #  endif
 #endif /* !UTIL */
 
         /* in zipfile.c */
 #ifndef UTIL
-   struct zlist far *zsearch OF((ZCONST char *));
+   struct zlist far *zsearch(ZCONST char *);
 #  ifdef USE_EF_UT_TIME
-     int get_ef_ut_ztime OF((struct zlist far *, iztimes *));
+     int get_ef_ut_ztime(struct zlist far *, iztimes *);
 #  endif /* USE_EF_UT_TIME */
-   int trash OF((void));
+   int trash(void);
 #endif /* !UTIL */
-char *ziptyp OF((char *));
-int readzipfile OF((void));
-int putlocal OF((struct zlist far *, int));
-int putextended OF((struct zlist far *));
-int putcentral OF((struct zlist far *));
+char *ziptyp(char *);
+int readzipfile(void);
+int putlocal(struct zlist far *, int);
+int putextended(struct zlist far *);
+int putcentral(struct zlist far *);
 /* zip64 support 09/05/2003 R.Nausedat */
-int putend OF((uzoff_t, uzoff_t, uzoff_t, extent, char *));
+int putend(uzoff_t, uzoff_t, uzoff_t, extent, char *);
 /* moved seekable to separate function 3/14/05 EG */
-int is_seekable OF((FILE *));
-int zipcopy OF((struct zlist far *));
-int readlocal OF((struct zlist far **, struct zlist far *));
+int is_seekable(FILE *);
+int zipcopy(struct zlist far *);
+int readlocal(struct zlist far **, struct zlist far *);
 /* made global for handling extra fields */
-char *get_extra_field OF((ush, char *, unsigned));
-char *copy_nondup_extra_fields OF((char *, unsigned, char *, unsigned, unsigned *));
+char *get_extra_field(ush, char *, unsigned);
+char *copy_nondup_extra_fields(char *, unsigned, char *, unsigned, unsigned *);
 
         /* in fileio.c */
 #ifndef UTIL
-   char *getnam OF((FILE *));
-   struct flist far *fexpel OF((struct flist far *));
-   char *last OF((char *, int));
+   char *getnam(FILE *);
+   struct flist far *fexpel(struct flist far *);
+   char *last(char *, int);
 # ifdef UNICODE_SUPPORT
-   wchar_t *lastw OF((wchar_t *, wchar_t));
+   wchar_t *lastw(wchar_t *, wchar_t);
 # endif
-   char *msname OF((char *));
+   char *msname(char *);
 # ifdef UNICODE_SUPPORT
-   wchar_t *msnamew OF((wchar_t *));
+   wchar_t *msnamew(wchar_t *);
 # endif
-   int check_dup OF((void));
-   int filter OF((char *, int));
-   int newname OF((char *, int, int));
+   int check_dup(void);
+   int filter(char *, int);
+   int newname(char *, int, int);
 # ifdef UNICODE_SUPPORT
 #  ifdef WIN32
-   int newnamew OF((wchar_t *, int, int));
+   int newnamew(wchar_t *, int, int);
 #  endif
 # endif
    /* used by copy mode */
-   int proc_archive_name OF((char *, int));
+   int proc_archive_name(char *, int);
 #endif /* !UTIL */
 #if (!defined(UTIL) || defined(W32_STATROOT_FIX))
-   time_t dos2unixtime OF((ulg));
+   time_t dos2unixtime(ulg);
 #endif
 #ifndef UTIL
-   ulg dostime OF((int, int, int, int, int, int));
-   ulg unix2dostime OF((time_t *));
-   int issymlnk OF((ulg a));
+   ulg dostime(int, int, int, int, int, int);
+   ulg unix2dostime(time_t *);
+   int issymlnk(ulg a);
 #  ifdef S_IFLNK
 #    define rdsymlnk(p,b,n) readlink(p,b,n)
-/*   extern int readlink OF((char *, char *, int)); */
+/*   extern int readlink(char *, char *, int); */
 #  else /* !S_IFLNK */
 #    define rdsymlnk(p,b,n) (0)
 #  endif /* !S_IFLNK */
 #endif /* !UTIL */
 
-int destroy OF((char *));
-int replace OF((char *, char *));
-int getfileattr OF((char *));
-int setfileattr OF((char *, int));
-char *tempname OF((char *));
+int destroy(char *);
+int replace(char *, char *);
+int getfileattr(char *);
+int setfileattr(char *, int);
+char *tempname(char *);
 
 /* for splits */
-int close_split OF((ulg, FILE *, char *));
-int ask_for_split_read_path OF((ulg));
-int ask_for_split_write_path OF((ulg));
-char *get_in_split_path OF((char *, ulg));
-char *find_in_split_path OF((char *, ulg));
-char *get_out_split_path OF((char *, ulg));
-int rename_split OF((char *, char *));
-int set_filetype OF((char *));
+int close_split(ulg, FILE *, char *);
+int ask_for_split_read_path(ulg);
+int ask_for_split_write_path(ulg);
+char *get_in_split_path(char *, ulg);
+char *find_in_split_path(char *, ulg);
+char *get_out_split_path(char *, ulg);
+int rename_split(char *, char *);
+int set_filetype(char *);
 
-int bfcopy OF((uzoff_t));
+int bfcopy(uzoff_t);
 
-int fcopy OF((FILE *, FILE *, uzoff_t));
+int fcopy(FILE *, FILE *, uzoff_t);
 
 #ifdef ZMEM
-   char *memset OF((char *, int, unsigned int));
-   char *memcpy OF((char *, char *, unsigned int));
-   int memcmp OF((char *, char *, unsigned int));
+   char *memset(char *, int, unsigned int);
+   char *memcpy(char *, char *, unsigned int);
+   int memcmp(char *, char *, unsigned int);
 #endif /* ZMEM */
 
         /* in system dependent fileio code (<system>.c) */
 #ifndef UTIL
 # ifdef PROCNAME
-   int wild OF((char *));
+   int wild(char *);
 # endif
-   char *in2ex OF((char *));
-   char *ex2in OF((char *, int, int *));
+   char *in2ex(char *);
+   char *ex2in(char *, int, int *);
 #if defined(UNICODE_SUPPORT) && defined(WIN32)
-   int has_win32_wide OF((void));
-   wchar_t *in2exw OF((wchar_t *));
-   wchar_t *ex2inw OF((wchar_t *, int, int *));
-   int procnamew OF((wchar_t *, int));
+   int has_win32_wide(void);
+   wchar_t *in2exw(wchar_t *);
+   wchar_t *ex2inw(wchar_t *, int, int *);
+   int procnamew(wchar_t *, int);
 #endif
-   int procname OF((char *, int));
-   void stamp OF((char *, ulg));
+   int procname(char *, int);
+   void stamp(char *, ulg);
 
-   ulg filetime OF((char *, ulg *, zoff_t *, iztimes *));
+   ulg filetime(char *, ulg *, zoff_t *, iztimes *);
    /* Windows Unicode */
 # ifdef UNICODE_SUPPORT
 # ifdef WIN32
-   ulg filetimew OF((wchar_t *, ulg *, zoff_t *, iztimes *));
-   char *get_win32_utf8path OF((char *));
-   wchar_t *local_to_wchar_string OF ((char *));
+   ulg filetimew(wchar_t *, ulg *, zoff_t *, iztimes *);
+   char *get_win32_utf8path(char *);
+   wchar_t *local_to_wchar_string(char *);
 # endif
 # endif
 
 # if !(defined(VMS) && defined(VMS_PK_EXTRA))
-   int set_extra_field OF((struct zlist far *, iztimes *));
+   int set_extra_field(struct zlist far *, iztimes *);
 # endif /* ?(VMS && VMS_PK_EXTRA) */
-   int deletedir OF((char *));
+   int deletedir(char *);
 # ifdef MY_ZCALLOC
-     zvoid far *zcalloc OF((unsigned int, unsigned int));
-     zvoid zcfree       OF((zvoid far *));
+     zvoid far *zcalloc(unsigned int, unsigned int);
+     zvoid zcfree      (zvoid far *);
 # endif /* MY_ZCALLOC */
 #endif /* !UTIL */
-void version_local OF((void));
+void version_local(void);
 
         /* in util.c */
 #ifndef UTIL
-int   fseekable    OF((FILE *));
-char *isshexp      OF((char *));
+int   fseekable   (FILE *);
+char *isshexp     (char *);
 #ifdef UNICODE_SUPPORT
 # ifdef WIN32
-   wchar_t *isshexpw     OF((wchar_t *));
-   int dosmatchw   OF((ZCONST wchar_t *, ZCONST wchar_t *, int));
+   wchar_t *isshexpw    (wchar_t *);
+   int dosmatchw  (ZCONST wchar_t *, ZCONST wchar_t *, int);
 # endif
 #endif
-int   shmatch      OF((ZCONST char *, ZCONST char *, int));
+int   shmatch     (ZCONST char *, ZCONST char *, int);
 # if defined(DOS) || defined(WIN32)
-   int dosmatch    OF((ZCONST char *, ZCONST char *, int));
+   int dosmatch   (ZCONST char *, ZCONST char *, int);
 # endif /* DOS || WIN32 */
 #endif /* !UTIL */
 
 /* functions to convert zoff_t to a string */
-char *zip_fuzofft      OF((uzoff_t, char *, char*));
-char *zip_fzofft       OF((zoff_t, char *, char*));
+char *zip_fuzofft     (uzoff_t, char *, char*);
+char *zip_fzofft      (zoff_t, char *, char*);
 
 /* read and write number strings like 10M */
-int DisplayNumString OF ((FILE *file, uzoff_t i));
-int WriteNumString OF((uzoff_t num, char *outstring));
-uzoff_t ReadNumString OF((char *numstring));
+int DisplayNumString(FILE *file, uzoff_t i);
+int WriteNumString(uzoff_t num, char *outstring);
+uzoff_t ReadNumString(char *numstring);
 
 /* returns true if abbrev is abbreviation for string */
-int abbrevmatch OF((char *, char *, int, int));
+int abbrevmatch(char *, char *, int, int);
 
-void init_upper    OF((void));
-int  namecmp       OF((ZCONST char *string1, ZCONST char *string2));
+void init_upper   (void);
+int  namecmp      (ZCONST char *string1, ZCONST char *string2);
 
 #ifdef EBCDIC
-  char *strtoasc     OF((char *str1, ZCONST char *str2));
-  char *strtoebc     OF((char *str1, ZCONST char *str2));
-  char *memtoasc     OF((char *mem1, ZCONST char *mem2, unsigned len));
-  char *memtoebc     OF((char *mem1, ZCONST char *mem2, unsigned len));
+  char *strtoasc    (char *str1, ZCONST char *str2);
+  char *strtoebc    (char *str1, ZCONST char *str2);
+  char *memtoasc    (char *mem1, ZCONST char *mem2, unsigned len);
+  char *memtoebc    (char *mem1, ZCONST char *mem2, unsigned len);
 #endif /* EBCDIC */
 #ifdef IZ_ISO2OEM_ARRAY
-  char *str_iso_to_oem    OF((char *dst, ZCONST char *src));
+  char *str_iso_to_oem   (char *dst, ZCONST char *src);
 #endif
 #ifdef IZ_OEM2ISO_ARRAY
-  char *str_oem_to_iso    OF((char *dst, ZCONST char *src));
+  char *str_oem_to_iso   (char *dst, ZCONST char *src);
 #endif
 
-zvoid far **search OF((ZCONST zvoid *, ZCONST zvoid far **, extent,
-                       int (*)(ZCONST zvoid *, ZCONST zvoid far *)));
-void envargs       OF((int *, char ***, char *, char *));
-void expand_args   OF((int *, char ***));
+zvoid far **search (ZCONST zvoid *, ZCONST zvoid far **, extent,
+                       int (*)(ZCONST zvoid *, ZCONST zvoid far *));
+void envargs      (int *, char ***, char *, char *);
+void expand_args  (int *, char ***);
 
-int  is_text_buf   OF((ZCONST char *buf_ptr, unsigned buf_size));
+int  is_text_buf  (ZCONST char *buf_ptr, unsigned buf_size);
 /* this is no longer used ...
-unsigned int adler16 OF((unsigned int, ZCONST uch *, extent));
+unsigned int adler16(unsigned int, ZCONST uch *, extent);
 */
         /*  crc functions are now declared in crc32.h */
 
 #ifndef UTIL
 #ifndef USE_ZLIB
         /* in deflate.c */
-void lm_init OF((int, ush *));
-void lm_free OF((void));
+void lm_init(int, ush *);
+void lm_free(void);
 
-uzoff_t deflate OF((void));
+uzoff_t deflate(void);
 
         /* in trees.c */
-void     ct_init      OF((ush *, int *));
-int      ct_tally     OF((int, int));
-uzoff_t  flush_block  OF((char far *, ulg, int));
-void     bi_init      OF((char *, unsigned int, int));
+void     ct_init     (ush *, int *);
+int      ct_tally    (int, int);
+uzoff_t  flush_block (char far *, ulg, int);
+void     bi_init     (char *, unsigned int, int);
 #endif /* !USE_ZLIB */
 #endif /* !UTIL */
 
         /* in system specific assembler code, replacing C code in trees.c */
 #if defined(ASMV) && defined(RISCOS)
-  void     send_bits    OF((int, int));
-  unsigned bi_reverse   OF((unsigned int, int));
+  void     send_bits   (int, int);
+  unsigned bi_reverse  (unsigned int, int);
 #endif /* ASMV && RISCOS */
 
 /*---------------------------------------------------------------------------
     VMS-only functions:
   ---------------------------------------------------------------------------*/
 #ifdef VMS
-   int    vms_stat        OF((char *, stat_t *));              /* vms.c */
-   void   vms_exit        OF((int));                           /* vms.c */
+   int    vms_stat       (char *, stat_t *);              /* vms.c */
+   void   vms_exit       (int);                           /* vms.c */
 #ifndef UTIL
 #ifdef VMSCLI
-   ulg    vms_zip_cmdline OF((int *, char ***));                /* cmdline.c */
-   void   VMSCLI_help     OF((void));                           /* cmdline.c */
+   ulg    vms_zip_cmdline(int *, char ***);                /* cmdline.c */
+   void   VMSCLI_help    (void);                           /* cmdline.c */
 #endif /* VMSCLI */
 #endif /* !UTIL */
 #endif /* VMS */
 
 /*
 #ifdef ZIP64_SUPPORT
-   update_local_Zip64_extra_field OF((struct zlist far *, FILE *));
+   update_local_Zip64_extra_field(struct zlist far *, FILE *);
 #endif
 */
 
@@ -870,10 +870,10 @@ void     bi_init      OF((char *, unsigned int, int));
     WIN32-only functions:
   ---------------------------------------------------------------------------*/
 #ifdef WIN32
-   int ZipIsWinNT         OF((void));                         /* win32.c */
-   int ClearArchiveBit    OF((char *));                       /* win32.c */
+   int ZipIsWinNT        (void);                         /* win32.c */
+   int ClearArchiveBit   (char *);                       /* win32.c */
 # ifdef UNICODE_SUPPORT
-   int ClearArchiveBitW   OF((wchar_t *));                    /* win32.c */
+   int ClearArchiveBitW  (wchar_t *);                    /* win32.c */
 # endif
 #endif /* WIN32 */
 
@@ -891,7 +891,7 @@ void     bi_init      OF((char *, unsigned int, int));
 # if defined(UNICODE_SUPPORT) || defined(WIN32_OEM)
 */
   /* convert oem to ansi string */
-  char *oem_to_local_string OF((char *, char *));
+  char *oem_to_local_string(char *, char *);
 /*
 # endif
 */
@@ -902,7 +902,7 @@ void     bi_init      OF((char *, unsigned int, int));
 # if defined(UNICODE_SUPPORT) || defined(WIN32_OEM)
 */
   /* convert local string to oem string */
-  char *local_to_oem_string OF((char *, char *));
+  char *local_to_oem_string(char *, char *);
 /*
 # endif
 */
@@ -926,51 +926,51 @@ void     bi_init      OF((char *, unsigned int, int));
   typedef unsigned long zwchar;
 
   /* check if string is all ASCII */
-  int is_ascii_string OF((char *));
+  int is_ascii_string(char *);
 #ifdef WIN32
-  int is_ascii_stringw OF((wchar_t *));
-  zwchar *wchar_to_wide_string OF((wchar_t *));
+  int is_ascii_stringw(wchar_t *);
+  zwchar *wchar_to_wide_string(wchar_t *);
 #endif
 
   /* convert UTF-8 string to multi-byte string */
-  char *utf8_to_local_string OF((char *));
-  char *utf8_to_escape_string OF((char *));
+  char *utf8_to_local_string(char *);
+  char *utf8_to_escape_string(char *);
 
   /* convert UTF-8 string to wide string */
-  zwchar *utf8_to_wide_string OF((char *));
+  zwchar *utf8_to_wide_string(char *);
 
   /* convert wide string to multi-byte string */
-  char *wide_to_local_string OF((zwchar *));
-  char *wide_to_escape_string OF((zwchar *));
-  char *local_to_escape_string OF((char *));
+  char *wide_to_local_string(zwchar *);
+  char *wide_to_escape_string(zwchar *);
+  char *local_to_escape_string(char *);
 #ifdef WIN32
   /* convert UTF-8 to wchar */
-  wchar_t *utf8_to_wchar_string OF ((char *));
+  wchar_t *utf8_to_wchar_string(char *);
 
-  char *wchar_to_local_string OF((wchar_t *));
+  char *wchar_to_local_string(wchar_t *);
 #endif
 
   /* convert local string to multi-byte display string */
-  char *local_to_display_string OF((char *));
+  char *local_to_display_string(char *);
 
   /* convert wide character to escape string */
-  char *wide_char_to_escape_string OF((unsigned long));
+  char *wide_char_to_escape_string(unsigned long);
 
 #if 0
   /* convert escape string to wide character */
-  unsigned long escape_string_to_wide OF((char *));
+  unsigned long escape_string_to_wide(char *);
 #endif
 
   /* convert local to UTF-8 */
-  char *local_to_utf8_string OF ((char *));
+  char *local_to_utf8_string(char *);
 
   /* convert local to wide string */
-  zwchar *local_to_wide_string OF ((char *));
+  zwchar *local_to_wide_string(char *);
 
   /* convert wide string to UTF-8 */
-  char *wide_to_utf8_string OF((zwchar *));
+  char *wide_to_utf8_string(zwchar *);
 #ifdef WIN32
-  char *wchar_to_utf8_string OF((wchar_t *));
+  char *wchar_to_utf8_string(wchar_t *);
 #endif
 
 #endif /* UNICODE_SUPPORT */
@@ -987,8 +987,8 @@ void     bi_init      OF((char *, unsigned int, int));
 #define BFWRITE_CENTRALHEADER 2
 #define BFWRITE_HEADER 3 /* data descriptor or end records */
 
-size_t bfwrite OF((ZCONST void *buffer, size_t size, size_t count,
-                   int));
+size_t bfwrite (ZCONST void *buffer, size_t size, size_t count,
+                   int);
 
 /* for putlocal() */
 #define PUTLOCAL_WRITE 0
@@ -1048,7 +1048,7 @@ extern struct option_struct far options[];
 # endif
 #endif
 #ifdef MULTIBYTE_GETOPTNS
-  int mb_clen OF((ZCONST char *));
+  int mb_clen(ZCONST char *);
 # define MB_CLEN(ptr) mb_clen(ptr)
 # define MB_NEXTCHAR(ptr) ((ptr) += MB_CLEN(ptr))
 #else
@@ -1061,19 +1061,19 @@ extern struct option_struct far options[];
 /* function prototypes */
 
 /* get the next option from args */
-unsigned long get_option OF((char ***pargs, int *argc, int *argnum, int *optchar,
+unsigned long get_option (char ***pargs, int *argc, int *argnum, int *optchar,
                              char **value, int *negated, int *first_nonopt_arg,
-                             int *option_num, int recursion_depth));
+                             int *option_num, int recursion_depth);
 
 /* copy args - copy an args array, allocating space as needed */
-char **copy_args OF((char **args, int max_args));
+char **copy_args(char **args, int max_args);
 
 /* free args - free args created with one of these functions */
-int free_args OF ((char **args));
+int free_args(char **args);
 
 /* insert arg - copy an arg into args */
-int insert_arg OF ((char ***args, ZCONST char *arg, int insert_at,
-                    int free_args));
+int insert_arg (char ***args, ZCONST char *arg, int insert_at,
+                    int free_args);
 
 
 /*--------------------------------------------------------------------

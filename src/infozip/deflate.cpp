@@ -102,7 +102,7 @@
  *    MIN_LOOKAHEAD bytes (to avoid referencing memory beyond the end
  *    of window[] when looking for matches towards the end).
  */
-void IZDeflate::lm_init (int pack_level, ush *flags)
+void IZDeflate::lm_init (int pack_level, ush *a_flags)
     //int pack_level; /* 0: store, 1: best speed, 9: best compression */
     //ush *flags;     /* general purpose bit flag */
 {
@@ -149,9 +149,9 @@ void IZDeflate::lm_init (int pack_level, ush *flags)
 #endif
     max_chain_length = configuration_table[pack_level].max_chain;
     if (pack_level <= 2) {
-       *flags |= FAST;
+       *a_flags |= FAST;
     } else if (pack_level >= 8) {
-       *flags |= SLOW;
+       *a_flags |= SLOW;
     }
     /* ??? reduce max_chain_length for binary files */
 

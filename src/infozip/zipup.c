@@ -135,24 +135,24 @@
 
 /* Local functions */
 #ifndef RISCOS
-   local int suffixes OF((char *, char *));
+   local int suffixes(char *, char *);
 #else
-   local int filetypes OF((char *, char *));
+   local int filetypes(char *, char *);
 #endif
-local unsigned file_read OF((char *buf, unsigned size));
+local unsigned file_read(char *buf, unsigned size);
 #ifdef USE_ZLIB
-  local int zl_deflate_init OF((int pack_level));
+  local int zl_deflate_init(int pack_level);
 #else /* !USE_ZLIB */
 # ifdef ZP_NEED_MEMCOMPR
-    local unsigned mem_read OF((char *buf, unsigned size));
+    local unsigned mem_read(char *buf, unsigned size);
 # endif
 #endif /* ?USE_ZLIB */
 
 /* zip64 support 08/29/2003 R.Nausedat */
-local zoff_t filecompress OF((struct zlist far *z_entry, int *cmpr_method));
+local zoff_t filecompress(struct zlist far *z_entry, int *cmpr_method);
 
 #ifdef BZIP2_SUPPORT
-local zoff_t bzfilecompress OF((struct zlist far *z_entry, int *cmpr_method));
+local zoff_t bzfilecompress(struct zlist far *z_entry, int *cmpr_method);
 #endif
 
 /* Deflate "internal" global data (currently not in zip.h) */
@@ -167,7 +167,7 @@ local zoff_t bzfilecompress OF((struct zlist far *z_entry, int *cmpr_method));
 #ifndef USE_ZLIB
   extern ulg window_size;       /* size of said window */
 
-  unsigned (*read_buf) OF((char *buf, unsigned size)) = file_read;
+  unsigned (*read_buf)(char *buf, unsigned size) = file_read;
   /* Current input function. Set to mem_read for in-memory compression */
 #endif /* !USE_ZLIB */
 
